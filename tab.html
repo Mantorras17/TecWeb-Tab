@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tâb Game</title>
+    <link rel="stylesheet" href="tab.css">
+</head>
+<body>
+    <div id="logo">TÂB</div>
+    <div id="configurations">
+        <label for="board-size">Board Size:</label>
+        <select id="board-size">
+            <option value="7">7</option>
+            <option value="9" selected>9</option>
+            <option value="11">11</option>
+            <option value="13">13</option>
+            <option value="15">15</option>
+        </select>
+        <label for="first-player">First Player:</label>
+        <select id="first-player">
+            <option value="player">Player</option>
+            <option value="cpu">CPU</option>
+        </select>
+        <label for="difficulty">Difficulty:</label>
+        <select id="difficulty">
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+        </select>
+    </div>
+    <div id="controls">
+        <button id="show-instructions">Instructions</button>
+        <button id="start-game">Start</button>
+        <button id="quit-game">Quit</button>
+        <button id="show-scoreboard">Scoreboard</button>
+    </div>
+    <div id="identification">
+        <!-- Authentication UI placeholder -->
+        <span>User: <span id="user-id">Guest</span></span>
+    </div>
+    <div id="dice-of-sticks">
+        <button id="throw-sticks">Throw Sticks</button>
+        <div id="sticks-result"></div>
+    </div>
+    <div id="board">
+        <!-- Board will be rendered here -->
+    </div>
+    <div id="instructions" style="display:none;">
+        <button id="close-instructions">Close</button>
+        <div id="instructions-content"></div>
+    </div>
+    <div id="scoreboard" style="display:none;">
+        <button id="close-scoreboard">Close</button>
+        <div id="scoreboard-content"></div>
+    </div>
+    <div id="messages"></div>
+    <script src="tab.js"></script>
+</body>
+</html>

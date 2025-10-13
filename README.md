@@ -148,3 +148,25 @@ The page must be divided in various divs for these different finalities:
          - A more sophisticated way is to give priority to those that lead to captures.
          - To implement various difficulthy levels is to combine both of the methods above, randomly choosing each play which one to use.
          - By far the best way to implement a CPU with levels of difficulty is using the MinMax algorithm, where the depth can map difficulty (implement this one).
+
+
+   - Feature Ideas:
+      1. Scoreboard w/
+
+   - Layout:
+
+      +-----------+----------------------------------------+----------+ 
+      | sidePanel |  LogoSymbol     LOGO                   |  login   | 
+      | (hidden)  +--+-------------------------------------+    w/    | 
+      |           |  |               messages              | popover  | 
+      | Configs   |  +-------------------------------------+----------+
+      | Instrs    |  |                                     |          | 
+      |           |  |                                     |          | 
+      |           |  |            boardgame                |  sticks  | 
+      |           |  |                                     |          | 
+      |           |  |                                     |          | 
+      |           +--+-------------------------------------+----------+ 
+      |           |                                                   | 
+      |           |           scoreboard                              | 
+      |           |                                                   | 
+      +-----------+---------------------------------------------------+ 

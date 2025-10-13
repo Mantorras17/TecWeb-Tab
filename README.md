@@ -151,7 +151,16 @@ The page must be divided in various divs for these different finalities:
 
 
    - Feature Ideas:
-      1. Scoreboard w/
+      1. Scoreboard w/local, country and global
+      2. Customization of pieces with pngs or similar
+      3. dark/light mode
+      4. sound Effects!
+      5. User menu popover
+      6. Instructions
+      7. Accessible controls (keyboard navigation and ARIA labels)
+      8. Smooth transitions 
+      9. Highlight active elements
+      10. Responsive layout
 
    - Layout:
 

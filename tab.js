@@ -124,39 +124,48 @@ function showMessage(msg) {
     document.getElementById('messages').textContent = msg;
 }
 
+
 // Event listeners
-document.getElementById('start-game').onclick = () => {
+document.getElementById('start-game').addEventListener('click', () => {
     const size = parseInt(document.getElementById('board-size').value, 10);
     window.tabGame = new TabGame(size);
     renderBoard(window.tabGame);
     showMessage('Game started! Player\'s turn.');
-};
-document.getElementById('throw-sticks').onclick = () => {
+});
+document.getElementById('throw-sticks').addEventListener('click', () => {
     if (!window.tabGame) return;
     const result = window.tabGame.throwSticks();
     renderSticks(result);
     showMessage(`You threw the sticks: move ${result.value} cells.`);
-};
-document.getElementById('show-instructions').onclick = () => {
+});
+document.getElementById('show-instructions').addEventListener('click', () => {
     document.getElementById('instructions').style.display = 'block';
     document.getElementById('instructions-content').textContent = 'See README for rules.';
-};
-document.getElementById('close-instructions').onclick = () => {
+});
+document.getElementById('close-instructions').addEventListener('click', () => {
     document.getElementById('instructions').style.display = 'none';
-};
-document.getElementById('show-scoreboard').onclick = () => {
+});
+document.getElementById('show-scoreboard').addEventListener('click', () => {
     document.getElementById('scoreboard').style.display = 'block';
     document.getElementById('scoreboard-content').textContent = 'Scoreboard coming soon.';
-};
-document.getElementById('close-scoreboard').onclick = () => {
+});
+document.getElementById('close-scoreboard').addEventListener('click', () => {
     document.getElementById('scoreboard').style.display = 'none';
-};
-document.getElementById('quit-game').onclick = () => {
+});
+document.getElementById('quit-game').addEventListener('click', () => {
     window.tabGame = null;
     document.getElementById('board').innerHTML = '';
     document.getElementById('sticks-result').innerHTML = '';
     showMessage('Game quit.');
-};
+});
 
-// Initial render
 showMessage('Welcome to Tâb! Click Start to begin.');
+
+window.tabGame = new TabGame(parseInt(document.getElementById('board-size').value, 10));
+renderBoard(window.tabGame);
+
+document.getElementById('board-size').addEventListener('change', function() {
+    window.tabGame = new TabGame(parseInt(this.value, 10));
+    renderBoard(window.tabGame);
+    showMessage('Board size changed. Click Start to begin a new game.');
+});

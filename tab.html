@@ -65,55 +65,59 @@
                 <div id="sticks-result"></div>
             </div>
         </aside>
-        <footer id="scoreboard-area">
-            <div id="scoreboard">
-                <div id="leaderboard-tabs">
-                    <button class="leaderboard-tab active" data-tab="local">Local</button>
-                    <button class="leaderboard-tab" data-tab="national">National</button>
-                    <button class="leaderboard-tab" data-tab="worldwide">Worldwide</button>
-                </div>
-                <div id="leaderboard-content">
-                    <div class="leaderboard-panel" id="leaderboard-local">
-                        <table>
-                            <thead>
-                                <tr><th>Rank</th><th>Name</th><th>Wins</th><th>Losses</th><th>Win/Loss Ratio</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr><td>1</td><td>You</td><td>10</td><td>2</td><td>5.00</td></tr>
-                                <tr><td>2</td><td>Player2</td><td>8</td><td>4</td><td>2.00</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="leaderboard-panel" id="leaderboard-national" style="display:none;">
-                        <table>
-                            <thead>
-                                <tr><th>Rank</th><th>Name</th><th>Wins</th><th>Losses</th><th>Win/Loss Ratio</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr><td>1</td><td>NatPlayer1</td><td>25</td><td>5</td><td>5.00</td></tr>
-                                <tr><td>2</td><td>NatPlayer2</td><td>20</td><td>10</td><td>2.00</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="leaderboard-panel" id="leaderboard-worldwide" style="display:none;">
-                        <table>
-                            <thead>
-                                <tr><th>Rank</th><th>Name</th><th>Wins</th><th>Losses</th><th>Win/Loss Ratio</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr><td>1</td><td>WorldPlayer1</td><td>100</td><td>10</td><td>10.00</td></tr>
-                                <tr><td>2</td><td>WorldPlayer2</td><td>80</td><td>20</td><td>4.00</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </footer>
         <div id="instructions" style="display:none;">
             <button id="close-instructions">Close</button>
             <div id="instructions-content"></div>
         </div>
     </div>
-    <script src="tab.js"></script>
+    <div id="scoreboard-panel">
+    <div class="scoreboard-container">
+        <button id="close-scoreboard" class="close-btn">×</button>
+        <div id="leaderboard-tabs">
+            <button class="leaderboard-tab active" data-tab="local">Local</button>
+            <button class="leaderboard-tab" data-tab="national">National</button>
+            <button class="leaderboard-tab" data-tab="worldwide">Worldwide</button>
+        </div>
+
+        <div id="leaderboard-content">
+            <div class="leaderboard-panel" id="leaderboard-local">
+                <table>
+                    <thead>
+                        <tr><th>Rank</th><th>Name</th><th>Wins</th><th>Losses</th><th>Win/Loss Ratio</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>1</td><td>You</td><td>10</td><td>2</td><td>5.00</td></tr>
+                        <tr><td>2</td><td>Player2</td><td>8</td><td>4</td><td>2.00</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="leaderboard-panel" id="leaderboard-national" style="display:none;">
+                <table>
+                    <thead>
+                        <tr><th>Rank</th><th>Name</th><th>Wins</th><th>Losses</th><th>Win/Loss Ratio</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>1</td><td>NatPlayer1</td><td>25</td><td>5</td><td>5.00</td></tr>
+                        <tr><td>2</td><td>NatPlayer2</td><td>20</td><td>10</td><td>2.00</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="leaderboard-panel" id="leaderboard-worldwide" style="display:none;">
+                <table>
+                    <thead>
+                        <tr><th>Rank</th><th>Name</th><th>Wins</th><th>Losses</th><th>Win/Loss Ratio</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>1</td><td>WorldPlayer1</td><td>100</td><td>10</td><td>10.00</td></tr>
+                        <tr><td>2</td><td>WorldPlayer2</td><td>80</td><td>20</td><td>4.00</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+    <!-- Botão fixo para abrir o scoreboard -->
+    <button id="scoreboard-btn" aria-label="Open scoreboard">🏆</button>
+<script src="tab.js"></script>
 </body>
 </html>

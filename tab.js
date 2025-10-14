@@ -168,12 +168,6 @@ menuBtn.addEventListener('click', () => {
     }
 });
 
-document.getElementById('sidePanel-close-btn').addEventListener('click', () => {
-    const panel = document.getElementById('sidePanel');
-    panel.style.width = '0';
-    panel.classList.remove('open');
-});
-
 showMessage('Welcome to Tâb! Click Start to begin.');
 
 window.tabGame = new TabGame(parseInt(document.getElementById('board-size').value, 10));
@@ -200,3 +194,36 @@ function calculateWinLossRatio(wins, losses) {
     if (losses === 0) return wins > 0 ? wins.toFixed(2) : "0.00";
     return (wins / losses).toFixed(2);
 }
+
+// ----- SCOREBOARD PANEL -----
+const scoreboardBtn = document.getElementById('scoreboard-btn');
+const scoreboardPanel = document.getElementById('scoreboard-panel');
+const closeScoreboard = document.getElementById('close-scoreboard');
+
+// abre o painel (tal como o menu lateral)
+scoreboardBtn.addEventListener('click', () => {
+    const isOpen = scoreboardPanel.classList.toggle('open');
+    if (isOpen) {
+        scoreboardBtn.innerHTML = '&times;'; // muda o ícone para X
+        setTimeout(() => scoreboardPanel.focus(), 10);
+    } else {
+        scoreboardBtn.innerHTML = '🏆'; // volta ao troféu
+    }
+});
+
+// fecha ao clicar no X dentro do painel
+closeScoreboard.addEventListener('click', () => {
+    scoreboardPanel.classList.remove('open');
+    scoreboardBtn.innerHTML = '🏆';
+});
+
+// Fecha ao clicar fora da caixa
+scoreboardPanel.addEventListener('click', (e) => {
+    if (e.target === scoreboardPanel) {
+        scoreboardPanel.classList.remove('open');
+        scoreboardBtn.innerHTML = '🏆';
+    }
+});
+
+
+

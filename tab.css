@@ -4,12 +4,171 @@ body {
     padding: 0;
     background: #f7f7f7;
 }
-#logo {
-    font-size: 2em;
-    font-weight: bold;
+#main-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 3fr) minmax(0, 1.5fr);
+    grid-template-rows: 8vh 5vh 1fr minmax(180px, 20vh);
+    grid-template-areas:
+        "sidePanel header login-area"
+        "sidePanel messages login-area"
+        "sidePanel main-content sticks-area"
+        "sidePanel scoreboard-area scoreboard-area";
+    min-height: 100vh;
+    width: 100vw;
+    box-sizing: border-box;
+}
+#sidePanel {
+    grid-area: sidePanel;
+    width: 0;
+    max-width: 90vw;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    background: #333;
+    overflow-x: hidden;
+    transition: width 0.3s;
+    color: white;
+    padding: 20px 0 0 0;
+    z-index: 200;
+    pointer-events: auto;
+}
+#sidePanel:focus-within {
+    width: min(90vw, 320px);
+    pointer-events: auto;
+}
+#sidePanel-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 100vw;
+}
+#sidePanel-logo {
+    font-size: 1.5em;
     text-align: center;
-    margin: 20px 0;
+    margin-bottom: 10px;
+}
+#sidePanel-configs {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#header {
+    grid-area: header;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+}
+#logo {
+    font-size: clamp(1.5em, 4vw, 2.5em);
+    font-weight: bold;
     letter-spacing: 0.2em;
+}
+
+#login-area {
+    grid-area: login-area;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: 10px;
+    min-width: 0;
+}
+#identification {
+    position: relative;
+}
+#user-popover {
+    position: absolute;
+    top: 30px;
+    right: 0;
+    background: #fff;
+    color: #222;
+    border: 1px solid #aaa;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px #0002;
+    padding: 10px;
+    min-width: 120px;
+    z-index: 300;
+}
+
+#messages {
+    grid-area: messages;
+    min-height: 40px;
+    color: #333;
+    font-size: 1.1em;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+}
+
+#main-content {
+    grid-area: main-content;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+}
+#board {
+    min-height: 200px;
+    max-width: 100vw;
+    width: 100%;
+    background: #eee;
+    border: 1px solid #ccc;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+#sticks-area {
+    grid-area: sticks-area;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 20px 0 0 0;
+    min-width: 0;
+}
+#dice-of-sticks {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#scoreboard-area {
+    grid-area: scoreboard-area;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 10px 0;
+    min-width: 0;
+}
+#scoreboard {
+    width: 100%;
+    max-width: 700px;
+    min-width: 220px;
+    background: #fff;
+    border: 1px solid #333;
+    padding: 20px;
+    z-index: 100;
+    box-shadow: 0 0 10px #333;
+    display: block;
+    position: relative;
+}
+#instructions {
+    width: 90vw;
+    max-width: 700px;
+    position: fixed;
+    top: 10%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #fff;
+    border: 1px solid #333;
+    padding: 20px;
+    z-index: 100;
+    box-shadow: 0 0 10px #333;
 }
 #configurations, #controls, #identification, #dice-of-sticks, #board, #messages {
     margin: 10px auto;
@@ -21,34 +180,14 @@ body {
 #controls button {
     margin-right: 10px;
 }
-#instructions, #scoreboard {
-    position: fixed;
-    top: 10%;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #fff;
-    border: 1px solid #333;
-    padding: 20px;
-    z-index: 100;
-    width: 60%;
-    box-shadow: 0 0 10px #333;
-}
-#board {
-    min-height: 300px;
-    background: #eee;
-    border: 1px solid #ccc;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
 .board-row {
     display: flex;
     gap: 5px;
+    flex-wrap: wrap;
 }
 .board-cell {
-    width: 40px;
-    height: 40px;
+    width: clamp(28px, 6vw, 40px);
+    height: clamp(28px, 6vw, 40px);
     background: #fff;
     border: 1px solid #aaa;
     display: flex;
@@ -57,8 +196,8 @@ body {
     cursor: pointer;
 }
 .piece {
-    width: 30px;
-    height: 30px;
+    width: clamp(20px, 4vw, 30px);
+    height: clamp(20px, 4vw, 30px);
     border-radius: 50%;
     opacity: 1;
 }
@@ -78,15 +217,6 @@ body {
     font-size: 1.1em;
     text-align: center;
 }
-#sidePanel-trigger {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 60px;
-    height: 100vh;
-    z-index: 201;
-    background: transparent;
-}
 #sidePanel {
     width: 0;
     height: 100vh;
@@ -101,12 +231,128 @@ body {
     z-index: 200;
     pointer-events: auto;
 }
-#sidePanel:hover,
-#sidePanel:focus-within,
-#sidePanel-trigger:hover + #sidePanel {
-    width: 250px;
+#sidePanel:focus-within {
+    width: 320px;
     pointer-events: auto;
 }
 #sidePanel #closePanel {
     display: none;
+}
+#menu-btn {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 300;
+    background: #333;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    width: 44px;
+    height: 44px;
+    font-size: 2em;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+#menu-btn:hover, #menu-btn:focus {
+    background: #444;
+    outline: none;
+}
+#leaderboard-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    justify-content: center;
+}
+.leaderboard-tab {
+    background: #eee;
+    border: 1px solid #aaa;
+    border-radius: 4px 4px 0 0;
+    padding: 6px 18px;
+    cursor: pointer;
+    font-weight: bold;
+    color: #333;
+    outline: none;
+    transition: background 0.2s;
+}
+.leaderboard-tab.active,
+.leaderboard-tab:hover {
+    background: #fff;
+    border-bottom: 1px solid #fff;
+}
+.leaderboard-panel {
+    display: block;
+}
+#leaderboard-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+}
+#leaderboard-content th, #leaderboard-content td {
+    border: 1px solid #ccc;
+    padding: 6px 10px;
+    text-align: center;
+}
+#leaderboard-content th {
+    background: #f0f0f0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+    #main-grid {
+        grid-template-columns: minmax(0, 1.5fr) minmax(0, 4fr) minmax(0, 1fr);
+        grid-template-rows: 8vh 5vh 1fr minmax(120px, 18vh);
+    }
+    #scoreboard {
+        max-width: 98vw;
+        padding: 10px;
+    }
+    #instructions {
+        max-width: 98vw;
+        padding: 10px;
+    }
+}
+@media (max-width: 600px) {
+    #main-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: 8vh 5vh 1fr minmax(120px, 18vh) auto;
+        grid-template-areas:
+            "header"
+            "login-area"
+            "messages"
+            "main-content"
+            "sticks-area"
+            "scoreboard-area";
+    }
+    #sidePanel {
+        position: fixed;
+        width: 0;
+        max-width: 100vw;
+        height: 100vh;
+        z-index: 300;
+    }
+    #sidePanel:focus-within {
+        width: 90vw;
+    }
+    #scoreboard {
+        max-width: 100vw;
+        padding: 5px;
+    }
+    #instructions {
+        max-width: 100vw;
+        padding: 5px;
+    }
+    #menu-btn {
+        width: 38px;
+        height: 38px;
+        font-size: 1.5em;
+        top: 8px;
+        left: 8px;
+    }
+    .board-cell, .piece {
+        min-width: 20px;
+        min-height: 20px;
+    }
 }

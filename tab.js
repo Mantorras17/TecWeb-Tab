@@ -145,18 +145,33 @@ document.getElementById('show-instructions').addEventListener('click', () => {
 document.getElementById('close-instructions').addEventListener('click', () => {
     document.getElementById('instructions').style.display = 'none';
 });
-document.getElementById('show-scoreboard').addEventListener('click', () => {
-    document.getElementById('scoreboard').style.display = 'block';
-    document.getElementById('scoreboard-content').textContent = 'Scoreboard coming soon.';
-});
-document.getElementById('close-scoreboard').addEventListener('click', () => {
-    document.getElementById('scoreboard').style.display = 'none';
-});
 document.getElementById('quit-game').addEventListener('click', () => {
     window.tabGame = null;
     document.getElementById('board').innerHTML = '';
     document.getElementById('sticks-result').innerHTML = '';
     showMessage('Game quit.');
+});
+const menuBtn = document.getElementById('menu-btn');
+const sidePanel = document.getElementById('sidePanel');
+
+menuBtn.addEventListener('click', () => {
+    const isOpen = sidePanel.classList.toggle('open');
+    if (isOpen) {
+        sidePanel.style.width = '320px';
+        menuBtn.innerHTML = '&times;';
+        setTimeout(() => {
+            sidePanel.focus();
+        }, 10);
+    } else {
+        sidePanel.style.width = '0';
+        menuBtn.innerHTML = '&#9776;';
+    }
+});
+
+document.getElementById('sidePanel-close-btn').addEventListener('click', () => {
+    const panel = document.getElementById('sidePanel');
+    panel.style.width = '0';
+    panel.classList.remove('open');
 });
 
 showMessage('Welcome to Tâb! Click Start to begin.');
@@ -169,3 +184,19 @@ document.getElementById('board-size').addEventListener('change', function() {
     renderBoard(window.tabGame);
     showMessage('Board size changed. Click Start to begin a new game.');
 });
+
+// Leaderboard tab switching
+document.querySelectorAll('.leaderboard-tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+        document.querySelectorAll('.leaderboard-tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+        document.querySelectorAll('.leaderboard-panel').forEach(panel => panel.style.display = 'none');
+        document.getElementById('leaderboard-' + this.dataset.tab).style.display = 'block';
+    });
+});
+
+// Example function to calculate win/loss ratio (skeleton, static data)
+function calculateWinLossRatio(wins, losses) {
+    if (losses === 0) return wins > 0 ? wins.toFixed(2) : "0.00";
+    return (wins / losses).toFixed(2);
+}

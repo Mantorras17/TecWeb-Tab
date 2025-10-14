@@ -6,58 +6,114 @@
     <link rel="stylesheet" href="tab.css">
 </head>
 <body>
-    <div id="logo">TÂB</div>
-    <div id="sidePanel-trigger"></div>
-    <div id="sidePanel">
-        <p> side panel lol</p>
+    <button id="menu-btn" aria-label="Open menu">&#9776;</button>
+    <div id="main-grid">
+        <aside id="sidePanel">
+            <div id="sidePanel-content">
+                <div id="sidePanel-logo">LogoSymbol</div>
+                <div id="sidePanel-configs">
+                    <div id="configurations">
+                        <label for="board-size">Board Size:</label>
+                        <select id="board-size">
+                            <option value="7">7</option>
+                            <option value="9" selected>9</option>
+                            <option value="11">11</option>
+                            <option value="13">13</option>
+                            <option value="15">15</option>
+                        </select>
+                        <label for="first-player">First Player:</label>
+                        <select id="first-player">
+                            <option value="player">Player</option>
+                            <option value="cpu">CPU</option>
+                        </select>
+                        <label for="difficulty">Difficulty:</label>
+                        <select id="difficulty">
+                            <option value="easy">Easy</option>
+                            <option value="medium">Medium</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </div>
+                    <div id="controls">
+                        <button id="show-instructions">Instructions</button>
+                        <button id="start-game">Start</button>
+                        <button id="quit-game">Quit</button>
+                        <button id="show-scoreboard">Scoreboard</button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        <header id="header">
+            <div id="logo">TÂB</div>
+        </header>
+        <div id="login-area">
+            <div id="identification">
+                <span>User: <span id="user-id">Guest</span></span>
+                <div id="user-popover" style="display:none;">
+                    <!-- Popover content here -->
+                    <button>Profile</button>
+                    <button>Logout</button>
+                </div>
+            </div>
+        </div>
+        <div id="messages"></div>
+        <main id="main-content">
+            <div id="board"></div>
+        </main>
+        <aside id="sticks-area">
+            <div id="dice-of-sticks">
+                <button id="throw-sticks">Throw Sticks</button>
+                <div id="sticks-result"></div>
+            </div>
+        </aside>
+        <footer id="scoreboard-area">
+            <div id="scoreboard">
+                <div id="leaderboard-tabs">
+                    <button class="leaderboard-tab active" data-tab="local">Local</button>
+                    <button class="leaderboard-tab" data-tab="national">National</button>
+                    <button class="leaderboard-tab" data-tab="worldwide">Worldwide</button>
+                </div>
+                <div id="leaderboard-content">
+                    <div class="leaderboard-panel" id="leaderboard-local">
+                        <table>
+                            <thead>
+                                <tr><th>Rank</th><th>Name</th><th>Wins</th><th>Losses</th><th>Win/Loss Ratio</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>1</td><td>You</td><td>10</td><td>2</td><td>5.00</td></tr>
+                                <tr><td>2</td><td>Player2</td><td>8</td><td>4</td><td>2.00</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="leaderboard-panel" id="leaderboard-national" style="display:none;">
+                        <table>
+                            <thead>
+                                <tr><th>Rank</th><th>Name</th><th>Wins</th><th>Losses</th><th>Win/Loss Ratio</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>1</td><td>NatPlayer1</td><td>25</td><td>5</td><td>5.00</td></tr>
+                                <tr><td>2</td><td>NatPlayer2</td><td>20</td><td>10</td><td>2.00</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="leaderboard-panel" id="leaderboard-worldwide" style="display:none;">
+                        <table>
+                            <thead>
+                                <tr><th>Rank</th><th>Name</th><th>Wins</th><th>Losses</th><th>Win/Loss Ratio</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>1</td><td>WorldPlayer1</td><td>100</td><td>10</td><td>10.00</td></tr>
+                                <tr><td>2</td><td>WorldPlayer2</td><td>80</td><td>20</td><td>4.00</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </footer>
+        <div id="instructions" style="display:none;">
+            <button id="close-instructions">Close</button>
+            <div id="instructions-content"></div>
+        </div>
     </div>
-    <div id="configurations">
-        <label for="board-size">Board Size:</label>
-        <select id="board-size">
-            <option value="7">7</option>
-            <option value="9" selected>9</option>
-            <option value="11">11</option>
-            <option value="13">13</option>
-            <option value="15">15</option>
-        </select>
-        <label for="first-player">First Player:</label>
-        <select id="first-player">
-            <option value="player">Player</option>
-            <option value="cpu">CPU</option>
-        </select>
-        <label for="difficulty">Difficulty:</label>
-        <select id="difficulty">
-            <option value="easy">Easy</option>
-            <option value="medium">Medium</option>
-            <option value="hard">Hard</option>
-        </select>
-    </div>
-    <div id="controls">
-        <button id="show-instructions">Instructions</button>
-        <button id="start-game">Start</button>
-        <button id="quit-game">Quit</button>
-        <button id="show-scoreboard">Scoreboard</button>
-    </div>
-    <div id="identification">
-        <!-- Authentication UI placeholder -->
-        <span>User: <span id="user-id">Guest</span></span>
-    </div>
-    <div id="dice-of-sticks">
-        <button id="throw-sticks">Throw Sticks</button>
-        <div id="sticks-result"></div>
-    </div>
-    <div id="board">
-        <!-- Board will be rendered here -->
-    </div>
-    <div id="instructions" style="display:none;">
-        <button id="close-instructions">Close</button>
-        <div id="instructions-content"></div>
-    </div>
-    <div id="scoreboard" style="display:none;">
-        <button id="close-scoreboard">Close</button>
-        <div id="scoreboard-content"></div>
-    </div>
-    <div id="messages"></div>
     <script src="tab.js"></script>
 </body>
 </html>

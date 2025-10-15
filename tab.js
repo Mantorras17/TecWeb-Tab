@@ -15,8 +15,8 @@ class TabGame {
         }
         // Place pieces for both players
         for (let col = 0; col < this.columns; col++) {
-            board[3][col] = { owner: 'player', state: 'not-moved', color: col % 2 === 0 ? 'blue' : 'green' };
-            board[0][col] = { owner: 'cpu', state: 'not-moved', color: col % 2 === 0 ? 'red' : 'orange' };
+            board[3][col] = { owner: 'player', state: 'not-moved', color: 'blue'};
+            board[0][col] = { owner: 'cpu', state: 'not-moved', color: 'red'};
         }
         return board;
     }

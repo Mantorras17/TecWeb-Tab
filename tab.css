@@ -260,12 +260,8 @@ body {
     background: #444;
     outline: none;
 }
-#leaderboard-tabs {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 10px;
-    justify-content: center;
-}
+
+
 .leaderboard-tab {
     background: #eee;
     border: 1px solid #aaa;
@@ -376,15 +372,32 @@ body {
     bottom: 0;
 }
 
+#scoreboard-title {
+    text-align: center;
+    font-size: 1.6em;
+    font-weight: bold;
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #333;
+}
+
 .scoreboard-container { /*caixa branca com a tabela*/
     background: #fff;
     width: 90%;
     max-width: 700px;
     border: 1px solid #333;
     box-shadow: 0 -4px 10px rgba(0,0,0,0.3);
-    padding: 20px;
+    padding: 30px 20px 20px;
     border-radius: 8px 8px 0 0;
     position: relative;
+}
+
+/* Mensagem quando não há jogos */
+#no-scores-msg {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+    margin-top: 15px;
 }
 
 .close-btn {

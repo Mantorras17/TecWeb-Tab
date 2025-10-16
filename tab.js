@@ -127,6 +127,7 @@ function showMessage(msg) {
 
 // Event listeners
 document.getElementById('start-game').addEventListener('click', () => {
+    document.getElementById('main-grid').style.display = 'grid';
     const size = parseInt(document.getElementById('board-size').value, 10);
     window.tabGame = new TabGame(size);
     renderBoard(window.tabGame);
@@ -198,7 +199,6 @@ function calculateWinLossRatio(wins, losses) {
 // ----- SCOREBOARD PANEL -----
 const scoreboardBtn = document.getElementById('scoreboard-btn');
 const scoreboardPanel = document.getElementById('scoreboard-panel');
-const closeScoreboard = document.getElementById('close-scoreboard');
 
 // abre o painel (tal como o menu lateral)
 scoreboardBtn.addEventListener('click', () => {
@@ -209,12 +209,6 @@ scoreboardBtn.addEventListener('click', () => {
     } else {
         scoreboardBtn.innerHTML = '🏆'; // volta ao troféu
     }
-});
-
-// fecha ao clicar no X dentro do painel
-closeScoreboard.addEventListener('click', () => {
-    scoreboardPanel.classList.remove('open');
-    scoreboardBtn.innerHTML = '🏆';
 });
 
 // Fecha ao clicar fora da caixa

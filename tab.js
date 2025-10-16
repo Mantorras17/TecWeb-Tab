@@ -25,11 +25,13 @@ class TabGame {
         const sticks = Array.from({ length: 4 }, () => Math.random() < 0.5 ? 0 : 1);
         const sum = sticks.reduce((a, b) => a + b, 0);
         let value;
-        if (sum === 0) value = 6;
-        else if (sum === 1) value = 1;
-        else if (sum === 2) value = 2;
-        else if (sum === 3) value = 3;
-        else value = 4;
+        switch (value) {
+            case 0: value = 6; break;
+            case 1: value = 1; break;
+            case 2: value = 2; break;
+            case 3: value = 3; break;
+            case 4: value = 4; break;
+        }
         this.diceValue = value;
         return { sticks, value };
     }

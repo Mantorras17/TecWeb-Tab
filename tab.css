@@ -4,6 +4,7 @@ body {
     padding: 0;
     background: #f7f7f7;
 }
+
 #main-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 3fr) minmax(0, 1.5fr);
@@ -17,6 +18,7 @@ body {
     width: 100vw;
     box-sizing: border-box;
 }
+
 #sidePanel {
     grid-area: sidePanel;
     width: 0;
@@ -33,21 +35,25 @@ body {
     z-index: 200;
     pointer-events: auto;
 }
+
 #sidePanel:focus-within {
     width: min(90vw, 320px);
     pointer-events: auto;
 }
+
 #sidePanel-content {
     display: flex;
     flex-direction: column;
     gap: 20px;
     max-width: 100vw;
 }
+
 #sidePanel-logo {
     font-size: 1.5em;
     text-align: center;
     margin-bottom: 10px;
 }
+
 #sidePanel-configs {
     display: flex;
     flex-direction: column;
@@ -61,6 +67,7 @@ body {
     justify-content: center;
     min-width: 0;
 }
+
 #logo {
     font-size: clamp(1.5em, 4vw, 2.5em);
     font-weight: bold;
@@ -75,9 +82,11 @@ body {
     padding: 10px;
     min-width: 0;
 }
+
 #identification {
     position: relative;
 }
+
 #user-popover {
     position: absolute;
     top: 30px;
@@ -111,6 +120,7 @@ body {
     justify-content: center;
     min-width: 0;
 }
+
 #board {
     min-height: 200px;
     max-width: 100vw;
@@ -131,6 +141,7 @@ body {
     padding: 20px 0 0 0;
     min-width: 0;
 }
+
 #dice-of-sticks {
     display: flex;
     flex-direction: column;
@@ -145,6 +156,7 @@ body {
     padding: 10px 0;
     min-width: 0;
 }
+
 #scoreboard {
     width: 100%;
     max-width: 700px;
@@ -157,6 +169,7 @@ body {
     display: block;
     position: relative;
 }
+
 #instructions {
     width: 90vw;
     max-width: 700px;
@@ -170,21 +183,32 @@ body {
     z-index: 100;
     box-shadow: 0 0 10px #333;
 }
-#configurations, #controls, #identification, #dice-of-sticks, #board, #messages {
+
+#configurations,
+#controls,
+#identification,
+#dice-of-sticks,
+#board,
+#messages {
     margin: 10px auto;
     max-width: 800px;
 }
-#configurations label, #configurations select {
+
+#configurations label,
+#configurations select {
     margin-right: 10px;
 }
+
 #controls button {
     margin-right: 10px;
 }
+
 .board-row {
     display: flex;
     gap: 5px;
     flex-wrap: wrap;
 }
+
 .board-cell {
     width: clamp(28px, 6vw, 40px);
     height: clamp(28px, 6vw, 40px);
@@ -195,28 +219,34 @@ body {
     justify-content: center;
     cursor: pointer;
 }
+
 .piece {
     width: clamp(20px, 4vw, 30px);
     height: clamp(20px, 4vw, 30px);
     border-radius: 50%;
     opacity: 1;
 }
+
 .piece.not-moved {
     opacity: 0.5;
 }
+
 .piece.moved {
     opacity: 0.8;
 }
+
 .piece.last-line {
     opacity: 1;
     border: 2px solid #333;
 }
+
 #messages {
     min-height: 40px;
     color: #333;
     font-size: 1.1em;
     text-align: center;
 }
+
 #sidePanel {
     width: 0;
     height: 100vh;
@@ -231,13 +261,16 @@ body {
     z-index: 200;
     pointer-events: auto;
 }
+
 #sidePanel:focus-within {
     width: 320px;
     pointer-events: auto;
 }
+
 #sidePanel #closePanel {
     display: none;
 }
+
 #menu-btn {
     position: fixed;
     top: 16px;
@@ -256,7 +289,9 @@ body {
     justify-content: center;
     transition: background 0.2s;
 }
-#menu-btn:hover, #menu-btn:focus {
+
+#menu-btn:hover,
+#menu-btn:focus {
     background: #444;
     outline: none;
 }
@@ -273,24 +308,30 @@ body {
     outline: none;
     transition: background 0.2s;
 }
+
 .leaderboard-tab.active,
 .leaderboard-tab:hover {
     background: #fff;
     border-bottom: 1px solid #fff;
 }
+
 .leaderboard-panel {
     display: block;
 }
+
 #leaderboard-content table {
     width: 100%;
     border-collapse: collapse;
     margin-bottom: 10px;
 }
-#leaderboard-content th, #leaderboard-content td {
+
+#leaderboard-content th,
+#leaderboard-content td {
     border: 1px solid #ccc;
     padding: 6px 10px;
     text-align: center;
 }
+
 #leaderboard-content th {
     background: #f0f0f0;
 }
@@ -301,15 +342,18 @@ body {
         grid-template-columns: minmax(0, 1.5fr) minmax(0, 4fr) minmax(0, 1fr);
         grid-template-rows: 8vh 5vh 1fr minmax(120px, 18vh);
     }
+
     #scoreboard {
         max-width: 98vw;
         padding: 10px;
     }
+
     #instructions {
         max-width: 98vw;
         padding: 10px;
     }
 }
+
 @media (max-width: 600px) {
     #main-grid {
         grid-template-columns: 1fr;
@@ -322,6 +366,7 @@ body {
             "sticks-area"
             "scoreboard-area";
     }
+
     #sidePanel {
         position: fixed;
         width: 0;
@@ -329,17 +374,21 @@ body {
         height: 100vh;
         z-index: 300;
     }
+
     #sidePanel:focus-within {
         width: 90vw;
     }
+
     #scoreboard {
         max-width: 100vw;
         padding: 5px;
     }
+
     #instructions {
         max-width: 100vw;
         padding: 5px;
     }
+
     #menu-btn {
         width: 38px;
         height: 38px;
@@ -347,14 +396,17 @@ body {
         top: 8px;
         left: 8px;
     }
-    .board-cell, .piece {
+
+    .board-cell,
+    .piece {
         min-width: 20px;
         min-height: 20px;
     }
 }
 
 /* Bottom scoreboard panel */
-#scoreboard-panel {  /*fundo escuro que sobe*/
+#scoreboard-panel {
+    /*fundo escuro que sobe*/
     position: fixed;
     bottom: -100%;
     left: 0;
@@ -369,7 +421,7 @@ body {
 }
 
 #scoreboard-panel.open {
-    bottom: 0 !important;
+    bottom: 0;
 }
 
 #scoreboard-title {
@@ -381,12 +433,13 @@ body {
     color: #333;
 }
 
-.scoreboard-container { /*caixa branca com a tabela*/
+.scoreboard-container {
+    /*caixa branca com a tabela*/
     background: #fff;
     width: 90%;
     max-width: 700px;
     border: 1px solid #333;
-    box-shadow: 0 -4px 10px rgba(0,0,0,0.3);
+    box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.3);
     padding: 30px 20px 20px;
     border-radius: 8px 8px 0 0;
     position: relative;
@@ -398,6 +451,16 @@ body {
     color: #666;
     font-style: italic;
     margin-top: 15px;
+}
+
+.close-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    cursor: pointer;
 }
 
 /* Botão fixo para abrir o painel do scoreboard */
@@ -417,75 +480,133 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
     transition: background 0.2s, transform 0.2s;
 }
 
-#scoreboard-btn:hover, #scoreboard-btn:focus {
+#scoreboard-btn:hover,
+#scoreboard-btn:focus {
     background: #444;
     transform: scale(1.05);
 }
 
-/* Add trigger area for side panel hover */
-#sidePanel-trigger {
+/* Intro / Landing screen */
+#intro-screen {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 32px; /* Adjust width as desired for trigger sensitivity */
-    height: 100vh;
-    z-index: 250;
-    background: transparent;
+    inset: 0;
+    background: radial-gradient(1200px 600px at 50% -10%, #ffffff, #f1f1f1 40%, #e8e8e8 70%, #e3e3e3 100%);
+    display: grid;
+    place-items: center;
+    z-index: 1000;
+    transition: opacity 400ms ease, visibility 0s linear 400ms;
 }
 
-/* Open side panel when trigger or panel is hovered/focused */
-#sidePanel.open,
-#sidePanel:focus-within,
-#sidePanel-trigger:hover + #sidePanel,
-#sidePanel:hover {
-    width: min(90vw, 320px);
-    pointer-events: auto;
+#intro-screen.hidden {
+    opacity: 0;
+    visibility: hidden;
+    /* after fade */
 }
 
-/* Remove JS-only open width for .open, let CSS handle it */
-#sidePanel {
-    /* ...existing code... */
-    transition: width 0.3s;
-    /* width: 0; keep as default closed */
+.intro-card {
+    background: #ffffff;
+    border: 1px solid #d6d6d6;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    border-radius: 20px;
+    padding: 40px 36px;
+    width: min(520px, 90vw);
+    text-align: center;
 }
 
-/* Bottom scoreboard trigger area */
-#scoreboard-trigger {
+.intro-logo {
+    font-size: clamp(36px, 6vw, 64px);
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    margin-bottom: 10px;
+}
+
+.intro-tagline {
+    margin: 0 0 24px 0;
+    color: #555;
+    font-size: 1.05rem;
+}
+
+.intro-start-btn {
+    font-size: 1.1rem;
+    padding: 12px 24px;
+    border-radius: 999px;
+    border: none;
+    background: #111;
+    color: #fff;
+    cursor: pointer;
+    transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.intro-start-btn:hover {
+    transform: translateY(-1px);
+}
+
+.intro-start-btn:active {
+    transform: translateY(0);
+    opacity: 0.9;
+}
+
+/* Mode Selection Screen */
+#mode-screen {
     position: fixed;
-    left: 0;
-    bottom: 0;
-    width: 100vw;
-    height: 50px; /* Adjust for sensitivity */
-    z-index: 501;
-    background: transparent;
+    inset: 0;
+    background: radial-gradient(1000px 500px at 50% -10%, #fff, #f0f0f0 50%, #e8e8e8 100%);
+    display: grid;
+    place-items: center;
+    z-index: 900;
+    transition: opacity 400ms ease, visibility 0s linear 400ms;
 }
 
-/* Open scoreboard panel on trigger hover, panel hover/focus, or .open class */
-#scoreboard-panel.open,
-#scoreboard-panel:focus-within,
-#scoreboard-trigger:hover + #scoreboard-panel,
-#scoreboard-panel:hover {
-    bottom: 0;
+#mode-screen.hidden {
+    opacity: 0;
+    visibility: hidden;
 }
 
-/* Default closed state */
-#scoreboard-panel {
-    /* ...existing code... */
-    bottom: -100%;
-    transition: bottom 0.4s ease-in-out;
-    /* ...existing code... */
+.mode-card {
+    background: #ffffff;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    padding: 40px;
+    width: min(420px, 90vw);
+    text-align: center;
 }
 
-/* Ensure .open class takes precedence */
-#sidePanel.open {
-    width: min(90vw, 320px) !important;
-    pointer-events: auto;
-}
-#scoreboard-panel.open {
-    bottom: 0 !important;
+.mode-logo {
+    font-size: 1.6rem;
+    font-weight: bold;
+    margin-bottom: 20px;
+    letter-spacing: 0.05em;
 }
 
+.mode-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.mode-btn {
+    padding: 12px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 8px;
+    background: #111;
+    color: #fff;
+    cursor: pointer;
+    transition: transform 120ms ease, opacity 120ms ease;
+}
+
+.mode-btn:hover {
+    transform: translateY(-1px);
+    opacity: 0.9;
+}
+
+.mode-btn:active {
+    transform: translateY(0);
+    opacity: 0.8;
+}

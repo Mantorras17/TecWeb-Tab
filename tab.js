@@ -39,71 +39,54 @@ class TabGame {
 function renderBoard(game) {
     const boardDiv = document.getElementById('board');
     boardDiv.innerHTML = '';
-
-    // Board container for flex layout
+  
+    // Outer container stays centered by #main-content CSS
+    const boardBox = document.createElement('div');
+    boardBox.className = 'board-box';
+  
+    // Inner container (width equals content)
     const boardContainer = document.createElement('div');
     boardContainer.style.display = 'flex';
     boardContainer.style.flexDirection = 'column';
-    boardContainer.style.alignItems = 'center';
-
-    // Column labels
-    const colLabels = document.createElement('div');
-    colLabels.className = 'board-row';
-    colLabels.style.fontWeight = 'bold';
-    colLabels.style.marginBottom = '4px';
-    colLabels.appendChild(document.createElement('div')); // Empty for row label
-    for (let j = 0; j < game.columns; j++) {
-        const label = document.createElement('div');
-        label.className = 'board-cell';
-        label.style.background = 'transparent';
-        label.textContent = String.fromCharCode(65 + j); // A, B, C, ...
-        colLabels.appendChild(label);
-    }
-    boardContainer.appendChild(colLabels);
-
-    // Render each board row with row label
+    boardContainer.style.alignItems = 'stretch'; // separators = 100% of board width
+    boardContainer.style.gap = '2px';
+  
+    // Build rows (no labels)
     for (let i = 0; i < 4; i++) {
-        const rowDiv = document.createElement('div');
-        rowDiv.className = 'board-row';
-        rowDiv.style.position = 'relative';
-
-        // Row label
-        const rowLabel = document.createElement('div');
-        rowLabel.className = 'board-cell';
-        rowLabel.style.background = 'transparent';
-        rowLabel.style.fontWeight = 'bold';
-        rowLabel.textContent = `L${i + 1}`;
-        rowDiv.appendChild(rowLabel);
-
-        for (let j = 0; j < game.columns; j++) {
-            const cellDiv = document.createElement('div');
-            cellDiv.className = 'board-cell';
-            cellDiv.dataset.row = i;
-            cellDiv.dataset.col = j;
-            const piece = game.board[i][j];
-            if (piece) {
-                const pieceDiv = document.createElement('div');
-                pieceDiv.className = 'piece ' + piece.state;
-                pieceDiv.style.background = piece.color;
-                pieceDiv.title = `${piece.owner} (${piece.state})`;
-                cellDiv.appendChild(pieceDiv);
-            }
-            rowDiv.appendChild(cellDiv);
+      const rowDiv = document.createElement('div');
+      rowDiv.className = 'board-row';
+  
+      for (let j = 0; j < game.columns; j++) {
+        const cellDiv = document.createElement('div');
+        cellDiv.className = 'board-cell';
+        cellDiv.dataset.row = i;
+        cellDiv.dataset.col = j;
+  
+        const piece = game.board[i][j];
+        if (piece) {
+          const pieceDiv = document.createElement('div');
+          pieceDiv.className = 'piece ' + piece.state;
+          pieceDiv.style.background = piece.color;
+          pieceDiv.title = `${piece.owner} (${piece.state})`;
+          cellDiv.appendChild(pieceDiv);
         }
-        boardContainer.appendChild(rowDiv);
-
-        // Add separator after each row except last
-        if (i < 3) {
-            const sep = document.createElement('div');
-            sep.style.width = `${(game.columns + 1) * 42}px`;
-            sep.style.borderBottom = '2px solid #333';
-            sep.style.margin = '2px 0 2px 0';
-            boardContainer.appendChild(sep);
-        }
+        rowDiv.appendChild(cellDiv);
+      }
+  
+      boardContainer.appendChild(rowDiv);
+  
+      // Separator after each row except the last
+      if (i < 3) {
+        const sep = document.createElement('div');
+        sep.className = 'row-sep';
+        boardContainer.appendChild(sep);
+      }
     }
-
-    boardDiv.appendChild(boardContainer);
-}
+  
+    boardBox.appendChild(boardContainer);
+    boardDiv.appendChild(boardBox);
+  }
+  
 
 function renderSticks(result) {
     const sticksDiv = document.getElementById('sticks-result');

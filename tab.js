@@ -151,22 +151,6 @@ document.getElementById('quit-game').addEventListener('click', () => {
     document.getElementById('sticks-result').innerHTML = '';
     showMessage('Game quit.');
 });
-const menuBtn = document.getElementById('menu-btn');
-const sidePanel = document.getElementById('sidePanel');
-
-menuBtn.addEventListener('click', () => {
-    const isOpen = sidePanel.classList.toggle('open');
-    if (isOpen) {
-        sidePanel.style.width = '320px';
-        menuBtn.innerHTML = '&times;';
-        setTimeout(() => {
-            sidePanel.focus();
-        }, 10);
-    } else {
-        sidePanel.style.width = '0';
-        menuBtn.innerHTML = '&#9776;';
-    }
-});
 
 showMessage('Welcome to Tâb! Click Start to begin.');
 
@@ -195,33 +179,48 @@ function calculateWinLossRatio(wins, losses) {
     return (wins / losses).toFixed(2);
 }
 
-// ----- SCOREBOARD PANEL -----
+// Scoreboard button logic: toggle open/close
 const scoreboardBtn = document.getElementById('scoreboard-btn');
 const scoreboardPanel = document.getElementById('scoreboard-panel');
-const closeScoreboard = document.getElementById('close-scoreboard');
+let scoreboardOpenedByButton = false;
 
-// abre o painel (tal como o menu lateral)
 scoreboardBtn.addEventListener('click', () => {
     const isOpen = scoreboardPanel.classList.toggle('open');
-    if (isOpen) {
-        scoreboardBtn.innerHTML = '&times;'; // muda o ícone para X
-        setTimeout(() => scoreboardPanel.focus(), 10);
-    } else {
-        scoreboardBtn.innerHTML = '🏆'; // volta ao troféu
+    scoreboardOpenedByButton = isOpen;
+});
+
+scoreboardPanel.addEventListener('mousedown', (e) => {
+    if (
+        scoreboardOpenedByButton &&
+        scoreboardPanel.classList.contains('open') &&
+        e.target === scoreboardPanel
+    ) {
+        scoreboardPanel.classList.remove('open');
+        scoreboardOpenedByButton = false;
     }
 });
 
-// fecha ao clicar no X dentro do painel
-closeScoreboard.addEventListener('click', () => {
-    scoreboardPanel.classList.remove('open');
-    scoreboardBtn.innerHTML = '🏆';
+const menuBtn = document.getElementById('menu-btn');
+const sidePanel = document.getElementById('sidePanel');
+let sidePanelOpenedByButton = false;
+
+menuBtn.addEventListener('click', () => {
+    const isOpen = sidePanel.classList.toggle('open');
+    sidePanelOpenedByButton = isOpen;
+    menuBtn.innerHTML = isOpen ? '&times;' : '&#9776;';
 });
 
-// Fecha ao clicar fora da caixa
-scoreboardPanel.addEventListener('click', (e) => {
-    if (e.target === scoreboardPanel) {
-        scoreboardPanel.classList.remove('open');
-        scoreboardBtn.innerHTML = '🏆';
+// Always close side panel when clicking outside if opened by button
+document.addEventListener('mousedown', (e) => {
+    if (
+        sidePanelOpenedByButton &&
+        sidePanel.classList.contains('open') &&
+        !sidePanel.contains(e.target) &&
+        e.target !== menuBtn
+    ) {
+        sidePanel.classList.remove('open');
+        menuBtn.innerHTML = '&#9776;';
+        sidePanelOpenedByButton = false;
     }
 });
 

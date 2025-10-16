@@ -369,7 +369,7 @@ body {
 }
 
 #scoreboard-panel.open {
-    bottom: 0;
+    bottom: 0 !important;
 }
 
 #scoreboard-title {
@@ -400,16 +400,6 @@ body {
     margin-top: 15px;
 }
 
-.close-btn {
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    background: none;
-    border: none;
-    font-size: 1.5em;
-    cursor: pointer;
-}
-
 /* Botão fixo para abrir o painel do scoreboard */
 #scoreboard-btn {
     position: fixed;
@@ -434,5 +424,68 @@ body {
 #scoreboard-btn:hover, #scoreboard-btn:focus {
     background: #444;
     transform: scale(1.05);
+}
+
+/* Add trigger area for side panel hover */
+#sidePanel-trigger {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 32px; /* Adjust width as desired for trigger sensitivity */
+    height: 100vh;
+    z-index: 250;
+    background: transparent;
+}
+
+/* Open side panel when trigger or panel is hovered/focused */
+#sidePanel.open,
+#sidePanel:focus-within,
+#sidePanel-trigger:hover + #sidePanel,
+#sidePanel:hover {
+    width: min(90vw, 320px);
+    pointer-events: auto;
+}
+
+/* Remove JS-only open width for .open, let CSS handle it */
+#sidePanel {
+    /* ...existing code... */
+    transition: width 0.3s;
+    /* width: 0; keep as default closed */
+}
+
+/* Bottom scoreboard trigger area */
+#scoreboard-trigger {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 50px; /* Adjust for sensitivity */
+    z-index: 501;
+    background: transparent;
+}
+
+/* Open scoreboard panel on trigger hover, panel hover/focus, or .open class */
+#scoreboard-panel.open,
+#scoreboard-panel:focus-within,
+#scoreboard-trigger:hover + #scoreboard-panel,
+#scoreboard-panel:hover {
+    bottom: 0;
+}
+
+/* Default closed state */
+#scoreboard-panel {
+    /* ...existing code... */
+    bottom: -100%;
+    transition: bottom 0.4s ease-in-out;
+    /* ...existing code... */
+}
+
+/* Ensure .open class takes precedence */
+#sidePanel.open {
+    width: min(90vw, 320px) !important;
+    pointer-events: auto;
+}
+#scoreboard-panel.open {
+    bottom: 0 !important;
 }
 

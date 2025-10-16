@@ -8,6 +8,7 @@
 <body>
     <button id="menu-btn" aria-label="Open menu">&#9776;</button>
     <div id="main-grid">
+        <div id="sidePanel-trigger"></div>
         <aside id="sidePanel">
             <div id="sidePanel-content">
                 <div id="sidePanel-logo">LogoSymbol</div>
@@ -70,26 +71,25 @@
             <div id="instructions-content"></div>
         </div>
     </div>
+    <div id="scoreboard-trigger"></div>
     <div id="scoreboard-panel">
-    <div class="scoreboard-container">
-        <button id="close-scoreboard" class="close-btn">×</button>
-        <h2 id="scoreboard-title">ScoreBoard</h2>
-
-        <div id="leaderboard-content">
-            <div class="leaderboard-panel" id="leaderboard-local">
-                <table>
-                    <thead>
-                        <tr><th>Rank</th><th>Name</th><th>Wins</th><th>Losses</th><th>Win/Loss Ratio</th></tr>
-                    </thead>
-                    <tbody id="scoreboard-body">
-                        <!-- vazio até o primeiro jogo -->
-                    </tbody>
-                </table>
-                <p id="no-scores-msg">No games played yet.</p>
+        <div class="scoreboard-container">
+            <h2 id="scoreboard-title">ScoreBoard</h2>
+            <div id="leaderboard-content">
+                <div class="leaderboard-panel" id="leaderboard-local">
+                    <table>
+                        <thead>
+                            <tr><th>Rank</th><th>Name</th><th>Wins</th><th>Losses</th><th>Win/Loss Ratio</th></tr>
+                        </thead>
+                        <tbody id="scoreboard-body">
+                            <!-- vazio até o primeiro jogo -->
+                        </tbody>
+                    </table>
+                    <p id="no-scores-msg">No games played yet.</p>
+                </div>
             </div>
         </div>
     </div>
-</div>
     <!-- Botão fixo para abrir o scoreboard -->
     <button id="scoreboard-btn" aria-label="Open scoreboard">🏆</button>
 <script src="tab.js"></script>

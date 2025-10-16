@@ -25,13 +25,8 @@ class TabGame {
         const sticks = Array.from({ length: 4 }, () => Math.random() < 0.5 ? 0 : 1);
         const sum = sticks.reduce((a, b) => a + b, 0);
         let value;
-        switch (value) {
-            case 0: value = 6; break;
-            case 1: value = 1; break;
-            case 2: value = 2; break;
-            case 3: value = 3; break;
-            case 4: value = 4; break;
-        }
+        if (sum === 0) value = 6;
+        else value = sum;
         this.diceValue = value;
         return { sticks, value };
     }
@@ -181,50 +176,107 @@ function calculateWinLossRatio(wins, losses) {
     return (wins / losses).toFixed(2);
 }
 
-// Scoreboard button logic: toggle open/close
+// ----- SCOREBOARD PANEL -----
 const scoreboardBtn = document.getElementById('scoreboard-btn');
 const scoreboardPanel = document.getElementById('scoreboard-panel');
-let scoreboardOpenedByButton = false;
+const closeScoreboard = document.getElementById('close-scoreboard');
 
+// abre o painel (tal como o menu lateral)
 scoreboardBtn.addEventListener('click', () => {
     const isOpen = scoreboardPanel.classList.toggle('open');
-    scoreboardOpenedByButton = isOpen;
+    if (isOpen) {
+        scoreboardBtn.innerHTML = '&times;'; // muda o ícone para X
+        setTimeout(() => scoreboardPanel.focus(), 10);
+    } else {
+        scoreboardBtn.innerHTML = '🏆'; // volta ao troféu
+    }
 });
 
-scoreboardPanel.addEventListener('mousedown', (e) => {
-    if (
-        scoreboardOpenedByButton &&
-        scoreboardPanel.classList.contains('open') &&
-        e.target === scoreboardPanel
-    ) {
+// fecha ao clicar no X dentro do painel
+closeScoreboard.addEventListener('click', () => {
+    scoreboardPanel.classList.remove('open');
+    scoreboardBtn.innerHTML = '🏆';
+});
+
+// Fecha ao clicar fora da caixa
+scoreboardPanel.addEventListener('click', (e) => {
+    if (e.target === scoreboardPanel) {
         scoreboardPanel.classList.remove('open');
-        scoreboardOpenedByButton = false;
+        scoreboardBtn.innerHTML = '🏆';
     }
 });
 
-const menuBtn = document.getElementById('menu-btn');
-const sidePanel = document.getElementById('sidePanel');
-let sidePanelOpenedByButton = false;
+// --- Intro + Mode screen logic (fixed version) ---
+document.addEventListener("DOMContentLoaded", () => {
+    const intro = document.getElementById("intro-screen");
+    const modeScreen = document.getElementById("mode-screen");
+    const appGrid = document.getElementById("main-grid"); // your main game layout
+    const introBtn = document.getElementById("intro-start");
+    const modeButtons = document.querySelectorAll(".mode-btn");
+    const modeBackBtn = document.getElementById("mode-back");
 
-menuBtn.addEventListener('click', () => {
-    const isOpen = sidePanel.classList.toggle('open');
-    sidePanelOpenedByButton = isOpen;
-    menuBtn.innerHTML = isOpen ? '&times;' : '&#9776;';
-});
+    // Ensure correct initial state
+    showIntro();
 
-// Always close side panel when clicking outside if opened by button
-document.addEventListener('mousedown', (e) => {
-    if (
-        sidePanelOpenedByButton &&
-        sidePanel.classList.contains('open') &&
-        !sidePanel.contains(e.target) &&
-        e.target !== menuBtn
-    ) {
-        sidePanel.classList.remove('open');
-        menuBtn.innerHTML = '&#9776;';
-        sidePanelOpenedByButton = false;
+    function showIntro() {
+        intro.style.display = "grid";
+        intro.classList.remove("hidden");
+
+        modeScreen.hidden = true;
+        modeScreen.style.display = "none";
+        appGrid.style.display = "none";
     }
-});
+
+    function showModeScreen() {
+      // Fade out intro
+        intro.classList.add("hidden");
+        intro.addEventListener(
+            "transitionend",
+            () => {
+                intro.style.display = "none";
+                // Show mode screen
+                modeScreen.hidden = false;
+                modeScreen.style.display = "grid";
+            },
+            { once: true }
+        );
+    }
+
+    function showGame() {
+      // Fade out mode screen
+        modeScreen.classList.add("hidden");
+        modeScreen.addEventListener(
+            "transitionend",
+            () => {
+                modeScreen.style.display = "none";
+                appGrid.style.display = "grid"; // reveal the main grid
+            },
+            { once: true }
+        );
+    }
+
+    // Button handlers
+    introBtn?.addEventListener("click", showModeScreen);
+
+    modeButtons.forEach((btn) => {
+        if (btn.id !== "mode-back") {
+            btn.addEventListener("click", () => {
+                showGame();
+                if (typeof showMessage === "function") {
+                    showMessage(`Mode selected: ${btn.textContent}`);
+                }
+            });
+        }
+    });
+
+    // Back button
+    modeBackBtn?.addEventListener("click", () => {
+        modeScreen.style.display = "none";
+        intro.style.display = "grid";
+        intro.classList.remove("hidden");
+    });
+    });
+  // --- End Intro + Mode screen logic ---
 
 
 

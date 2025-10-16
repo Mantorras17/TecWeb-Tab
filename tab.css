@@ -400,6 +400,16 @@ body {
     margin-top: 15px;
 }
 
+.close-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    cursor: pointer;
+}
+
 /* Botão fixo para abrir o painel do scoreboard */
 #scoreboard-btn {
     position: fixed;
@@ -489,3 +499,123 @@ body {
     bottom: 0 !important;
 }
 
+
+#intro-screen {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(1200px 600px at 50% -10%, #ffffff, #f1f1f1 40%, #e8e8e8 70%, #e3e3e3 100%);
+    display: grid;
+    place-items: center;
+    z-index: 1000;
+    transition: opacity 400ms ease, visibility 0s linear 400ms;
+}
+
+#intro-screen.hidden {
+    opacity: 0;
+    visibility: hidden;
+    /* after fade */
+}
+
+.intro-card {
+    background: #ffffff;
+    border: 1px solid #d6d6d6;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    border-radius: 20px;
+    padding: 40px 36px;
+    width: min(520px, 90vw);
+    text-align: center;
+}
+
+.intro-logo {
+    font-size: clamp(36px, 6vw, 64px);
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    margin-bottom: 10px;
+}
+
+.intro-tagline {
+    margin: 0 0 24px 0;
+    color: #555;
+    font-size: 1.05rem;
+}
+
+.intro-start-btn {
+    font-size: 1.1rem;
+    padding: 12px 24px;
+    border-radius: 999px;
+    border: none;
+    background: #111;
+    color: #fff;
+    cursor: pointer;
+    transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.intro-start-btn:hover {
+    transform: translateY(-1px);
+}
+
+.intro-start-btn:active {
+    transform: translateY(0);
+    opacity: 0.9;
+}
+
+/* Mode Selection Screen */
+#mode-screen {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(1000px 500px at 50% -10%, #fff, #f0f0f0 50%, #e8e8e8 100%);
+    display: grid;
+    place-items: center;
+    z-index: 900;
+    transition: opacity 400ms ease, visibility 0s linear 400ms;
+}
+
+#mode-screen.hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.mode-card {
+    background: #ffffff;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    padding: 40px;
+    width: min(420px, 90vw);
+    text-align: center;
+}
+
+.mode-logo {
+    font-size: 1.6rem;
+    font-weight: bold;
+    margin-bottom: 20px;
+    letter-spacing: 0.05em;
+}
+
+.mode-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.mode-btn {
+    padding: 12px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 8px;
+    background: #111;
+    color: #fff;
+    cursor: pointer;
+    transition: transform 120ms ease, opacity 120ms ease;
+}
+
+.mode-btn:hover {
+    transform: translateY(-1px);
+    opacity: 0.9;
+}
+
+.mode-btn:active {
+    transform: translateY(0);
+    opacity: 0.8;
+}

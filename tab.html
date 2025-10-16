@@ -6,6 +6,24 @@
     <link rel="stylesheet" href="tab.css">
 </head>
 <body>
+    <div id="intro-screen" role="dialog" aria-modal="true">
+        <div class="intro-card">
+            <div class="intro-logo">TÂB</div>
+            <p class="intro-tagline">A strategy race of sticks and quick wits.</p>
+            <button id="intro-start" class="intro-start-btn" aria-label="Start Tâb">Start</button>
+        </div>
+    </div>
+    <div id="mode-screen" hidden aria-hidden="true">
+        <div class="mode-card">
+            <div class="mode-logo">Choose Game Mode</div>
+            <div class="mode-buttons">
+                <button class="mode-btn" id="mode-single">Single Player</button>
+                <button class="mode-btn" id="mode-multi">Multiplayer (Local)</button>
+                <button class="mode-btn" id="mode-cpu">Player vs CPU</button>
+                <button class="mode-btn" id="mode-back">← Back</button>
+            </div>
+        </div>
+    </div>
     <button id="menu-btn" aria-label="Open menu">&#9776;</button>
     <div id="main-grid">
         <div id="sidePanel-trigger"></div>
@@ -38,6 +56,7 @@
                         <button id="show-instructions">Instructions</button>
                         <button id="start-game">Start</button>
                         <button id="quit-game">Quit</button>
+                        <button id="show-scoreboard">Scoreboard</button>
                     </div>
                 </div>
             </div>
@@ -72,21 +91,8 @@
     </div>
     <div id="scoreboard-trigger"></div>
     <div id="scoreboard-panel">
-    <div class="scoreboard-container">
-        <h2 id="scoreboard-title">ScoreBoard</h2>
-
-        <div id="leaderboard-content">
-            <div class="leaderboard-panel" id="leaderboard-local">
-                <table>
-                    <thead>
-                        <tr><th>Rank</th><th>Name</th><th>Wins</th><th>Losses</th><th>Win/Loss Ratio</th></tr>
-                    </thead>
-                    <tbody id="scoreboard-body">
-                        <!-- vazio até o primeiro jogo -->
-                    </tbody>
-                </table>
-                <p id="no-scores-msg">No games played yet.</p>
         <div class="scoreboard-container">
+            <button id="close-scoreboard" class="close-btn">×</button>
             <h2 id="scoreboard-title">ScoreBoard</h2>
             <div id="leaderboard-content">
                 <div class="leaderboard-panel" id="leaderboard-local">

@@ -189,6 +189,8 @@ let scoreboardOpenedByButton = false;
 scoreboardBtn.addEventListener('click', () => {
     const isOpen = scoreboardPanel.classList.toggle('open');
     scoreboardOpenedByButton = isOpen;
+    // Troca ícone do botão: troféu → cruz
+    scoreboardBtn.textContent = isOpen ? '✖' : '🏆';
 });
 
 scoreboardPanel.addEventListener('mousedown', (e) => {

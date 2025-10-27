@@ -65,9 +65,9 @@ function renderBoard(game) {
         const piece = game.board[i][j];
         if (piece) {
           const pieceDiv = document.createElement('div');
-          pieceDiv.className = 'piece ' + piece.state;
-          pieceDiv.style.background = piece.color;
-          pieceDiv.title = `${piece.owner} (${piece.state})`;
+          pieceDiv.className = 'piece ' + piece.state + ' ' + (piece.owner === 'player' ? 'p1' : 'p2');
+          // no inline background
+          pieceDiv.title = `${piece.owner} (${piece.state})`;          
           cellDiv.appendChild(pieceDiv);
         }
         rowDiv.appendChild(cellDiv);
@@ -104,8 +104,14 @@ function renderSticks(result) {
 }
 
 function showMessage(msg) {
-    document.getElementById('messages').textContent = msg;
+  const m = document.getElementById('messages');
+  m.innerHTML = '';                      // clear previous
+  const box = document.createElement('div');
+  box.className = 'msg-box';
+  box.textContent = msg;                 // safe text
+  m.appendChild(box);
 }
+
 
 
 // Event listeners

@@ -34,7 +34,7 @@
     <!-- App (your current UI) -->
     <button id="menu-btn" aria-label="Open menu">&#9776;</button>
     <div id="main-grid">
-        <aside id="sidePanel">
+        <aside id="sidePanel" tabindex="-1">
             <div id="sidePanel-content">
                 <div id="sidePanel-logo">LogoSymbol</div>
                 <div id="sidePanel-configs">
@@ -82,7 +82,11 @@
                 </div>
             </div>
         </div>
-        <div id="messages"></div>
+        <div id="messages">
+            <div class="msg-box">
+              <button id="open-sidepanel" class="intro-start-btn">Open Menu</button>
+            </div>
+          </div>          
         <main id="main-content">
             <div id="board"></div>
         </main>

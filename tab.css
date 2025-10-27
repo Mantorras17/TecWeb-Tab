@@ -34,7 +34,40 @@
     min-height: 100vh;
     width: 100vw;
     box-sizing: border-box;
+    position: relative;
 }
+
+/* the overlay */
+#main-grid::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: calc(var(--top-veil-h) - 3px);
+    background: rgba(245, 235, 225, 0.35);     /* translucent */
+    backdrop-filter: blur(10px) saturate(1.1);  /* frosted effect */
+    -webkit-backdrop-filter: blur(10px) saturate(1.1);
+    border-radius: 0 ;            /* soft bottom corners */
+    box-shadow: 0 6px 16px rgba(0,0,0,0.18);
+    pointer-events: none;                        /* don’t block clicks */
+    z-index: 0;
+  }
+  
+  #main-grid::after{
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(var(--bar-top) + 22px);  /* ⬅️ pushes it 20px lower */
+    height: calc(var(--bar-height) + 4px);
+    background: rgba(255, 255, 255, 0.6);
+    box-shadow:
+      inset 0 1px 2px rgba(255,255,255,0.3),
+      0 3px 8px rgba(0,0,0,0.12);
+    pointer-events: none;
+    z-index: 1;                        /* behind header/messages */
+  }
 
 #sidePanel {
     grid-area: sidePanel;
@@ -77,16 +110,14 @@
     gap: 10px;
 }
 
-/* remove the push */
 #header {
-    /* padding-top: 115px; */   /* ← delete this */
     grid-area: header;
     display: flex;
     align-items: center;
     justify-content: center;
     min-width: 0;
   }
-
+  
 #logo-wrapper {
     position: relative;
     display: flex;
@@ -102,7 +133,7 @@
     font-size: clamp(3em, 8vw, 7em);
     letter-spacing: 0.05em;
     text-align: center;
-    margin: 40px 0 10px;
+    margin: 12px 0 32px;
   
     /* NEW styles for white text with black border */
     color: #4c3629;
@@ -116,56 +147,42 @@
 /* Hide when empty */
 #messages:empty { display: none; }
 
-/* Main container: centers both bar + box */
 #messages {
-  grid-area: messages;
-  justify-self: center;
-  align-self: start;
-  position: relative;
-  text-align: center;
-
-  margin-top: -42px; /* bring closer to logo */
-  padding: 0;
-
-  background: none;
-  border: none;
-  box-shadow: none;
-}
-
-/* === Top white translucent bar === */
-#messages::before {
-    content: "";
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    top: -60px;
-    width: min(700px, 82vw);
-    height: 20px;
-    border-radius: 999px;
+    grid-area: messages;
+    justify-self: center;
+    align-self: start;
+    position: relative;
+    text-align: center;
   
-    /* softer, more transparent white */
-    background: linear-gradient(
-      to bottom,
-      rgba(255, 255, 255, 0.8),
-      rgba(245, 245, 245, 0.65)
-    );
+    /* pull the messages higher */
+    transform: translateY(-28px);  /* adjust this number to taste */
+    transition: transform 0.3s ease;
   
-    box-shadow:
-      inset 0 1px 2px rgba(0, 0, 0, 0.08),
-      0 4px 12px rgba(0, 0, 0, 0.15);
+    background: none;
+    border: none;
+    box-shadow: none;
+
+    max-width: none !important;
+    width: 100%;
+    display: flex;
+    justify-content: center;
   }
-
+  
 /* === Taller translucent message box === */
 #messages .msg-box {
     display: inline-flex;               /* centers text vertically */
     align-items: center;
     justify-content: center;
   
-    margin-top: 28px;                   /* space below the bar */
+    margin-top: 50px;                   /* space below the bar */
     padding: 40px 48px;                 /* wider & taller padding */
     min-height: 110px;                  /* ensures it’s visibly taller */
     border-radius: 20px;
   
+    width: calc((var(--cell) * 11) ); /* 120px = .board-box left+right padding (40px 60px) */
+    max-width: 96vw;   /* safety so it never overflows small screens */
+    box-sizing: border-box;
+
     background: linear-gradient(
       to bottom,
       rgba(255, 255, 255, 0.6),
@@ -312,9 +329,12 @@
 }
 
 :root {
+    --top-veil-h: clamp(120px, 18vh, 200px);
     --cell: clamp(50px, 6vw, 72px);   /* board cell size */
     --gap: clamp(4px, 0.6vw, 8px);    /* cell gap */
     --piece: calc(var(--cell) * 0.74);
+    --bar-top: calc(var(--top-veil-h) - 26px); /* vertical position */
+    --bar-height: 18px;   
   }
 
 .board-box {
@@ -322,7 +342,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  margin: -24px auto 32px; 
+  margin: 100px auto 64px !important;
   padding: 40px 60px;
   background: #351a1a;
   border: none;
@@ -333,10 +353,12 @@
   transition: transform 0.3s ease;
 }
 
-  
-/* AFTER (neutralized) */
+/* keep it consistent on tall screens */
 @media (min-height: 700px) {
-    .board-box { margin-top: -12px; margin-bottom: 4vh; }
+    .board-box {
+      margin-top: 100px !important;
+      margin-bottom: 8vh;
+    }
   }
   
   .board-row {
@@ -459,7 +481,7 @@
     top: 16px;
     left: 16px;
     z-index: 300;
-    background: #333;
+    background: #4c3629;
     color: #fff;
     border: none;
     border-radius: 6px;

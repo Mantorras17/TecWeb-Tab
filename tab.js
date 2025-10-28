@@ -192,7 +192,7 @@ class TabGame {
     const value = (sum === 0) ? 6 : sum;
     this.stickValue = value;
     this.lastStickValue = value;
-    return value;
+    return { sticks, value };
   }
 
   getCurrentPlayer() {
@@ -278,6 +278,31 @@ class TabGame {
     return this.getSelectedMoves();
   }
 
+  selectOrMoveAt(row, col) {
+    const piece = this.getCurrentPlayer().getPieceAt(row, col);
+    if (piece) {
+      const moves = this.selectPieceAt(row, col);
+      return moves.length > 0;
+    }
+    if (!this.selectedPiece) return false;
+    return this.moveSelectedTo(row, col);
+  }
+
+  movePiece(piece, toRow, toCol) {
+    if (!piece || this.stickValue == null) return false;
+    const legal = this.possibleMoves(piece, this.stickValue);
+    const ok = legal.some(p => p.row === toRow && p.col === toCol);
+    if (!ok) return false;
+    const occ = this.isCellOccupied(toRow, toCol);
+    if (occ && occ.owner === 'opponent') this.handleCapture(occ.piece);
+    else if (occ && occ.owner === 'me') return false;
+    piece.moveTo(toRow, toCol);
+    this.clearSelection();
+    const again = this.playAgain();
+    this.endTurn(again);
+    return true;
+  }
+
   getSelectedMoves() {
     return this.selectedMoves.slice();
   }
@@ -304,9 +329,7 @@ class TabGame {
     }
     else if (occ && occ.owner === 'me') return false;
     piece.moveTo(row, col);
-
-    this.selectedPiece = null;
-    this.selectedMoves = [];
+    this.clearSelection();
     const playAgain = this.playAgain();
     this.endTurn(playAgain);
     return true;
@@ -486,4 +509,299 @@ class TabGame {
 }
 
 
-window.game = new TabGame(9);
+
+
+
+
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Try to read size from a selector; fallback to 9
+  const sizeInput = document.getElementById('board-size');
+  const initialCols = sizeInput ? parseInt(sizeInput.value, 10) || 9 : 9;
+
+  // Single game instance
+  window.game = new TabGame(initialCols);
+
+  // Elements (guarded: only use if present)
+  const intro = document.getElementById('intro-screen');
+  const modeScreen = document.getElementById('mode-screen');
+  const introStartBtn = document.getElementById('intro-start');
+  const modeSingleBtn = document.getElementById('mode-single');
+  const modeMultiBtn = document.getElementById('mode-multi');
+  const modeCpuBtn = document.getElementById('mode-cpu');
+  const modeBackBtn = document.getElementById('mode-back');
+  const boardEl = document.getElementById('board');
+  const rollBtn = document.getElementById('throw-sticks');
+  const sticksEl = document.getElementById('sticks-result');
+  const startSideBtn = document.getElementById('start-game');
+  const quitBtn = document.getElementById('quit-game');
+  const msgEl = document.getElementById('messages');
+  const instrOpen = document.getElementById('show-instructions');
+  const instrClose = document.getElementById('close-instructions');
+  const instrPanel = document.getElementById('instructions');
+  const menuBtn = document.getElementById('menu-btn');
+  const sidePanel = document.getElementById('sidePanel');
+  const openSidePanelBtn = document.getElementById('open-sidepanel');
+  const scoreboardBtn = document.getElementById('scoreboard-btn');
+  const scoreboardPanel = document.getElementById('scoreboard-panel');
+  const mainGrid = document.getElementById('main-grid');
+
+  // Helpers
+  function setMessage(text) {
+    if (!msgEl) return;
+    msgEl.innerHTML = '';
+    const box = document.createElement('div');
+    box.className = 'msg-box';
+    box.textContent = text || '';
+    msgEl.appendChild(box);
+  }
+
+  function renderSticks(valueOrResult) {
+    if (!sticksEl) return;
+    sticksEl.innerHTML = '';
+    const value = typeof valueOrResult === 'number' ? valueOrResult : valueOrResult?.value;
+    if (value == null) return;
+    sticksEl.innerHTML = `Roll: <b>${value}</b>`;
+  }
+
+  // Build/Render board (no arrows, clean layout)
+  function buildBoard() {
+    if (!boardEl) return;
+    boardEl.innerHTML = '';
+
+    const box = document.createElement('div');
+    box.className = 'board-box';
+
+    const container = document.createElement('div');
+    container.style.display = 'flex';
+    container.style.flexDirection = 'column';
+    container.style.alignItems = 'stretch';
+    container.style.gap = '2px';
+
+    for (let r = 0; r < game.rows; r++) {
+      const rowDiv = document.createElement('div');
+      rowDiv.className = 'board-row';
+
+      for (let c = 0; c < game.columns; c++) {
+        const cell = document.createElement('button');
+        cell.type = 'button';
+        cell.className = 'board-cell';
+        cell.dataset.row = String(r);
+        cell.dataset.col = String(c);
+
+        // Piece layer
+        const me = game.getCurrentPlayer().getPieceAt(r, c);
+        const opp = game.getOpponentPlayer().getPieceAt(r, c);
+        if (me || opp) {
+          const piece = document.createElement('div');
+          piece.className = 'piece ' + (me ? 'p1' : 'p2') + ' ' + (me || opp).state;
+          piece.title = `${me ? 'player' : 'cpu'} (${(me || opp).state})`;
+          cell.appendChild(piece);
+        }
+
+        rowDiv.appendChild(cell);
+      }
+
+      container.appendChild(rowDiv);
+
+      if (r < game.rows - 1) {
+        const sep = document.createElement('div');
+        sep.className = 'row-sep';
+        container.appendChild(sep);
+      }
+    }
+
+    box.appendChild(container);
+    boardEl.appendChild(box);
+  }
+
+  function updateBoardHighlights() {
+    if (!boardEl) return;
+    // Clear all flags
+    boardEl.querySelectorAll('.board-cell').forEach(cell => {
+      cell.classList.remove('selected', 'highlight', 'mine', 'opp');
+    });
+    // Re-apply occupants and highlights
+    for (let r = 0; r < game.rows; r++) {
+      for (let c = 0; c < game.columns; c++) {
+        const cell = boardEl.querySelector(`.board-cell[data-row="${r}"][data-col="${c}"]`);
+        if (!cell) continue;
+        const me = game.getCurrentPlayer().getPieceAt(r, c);
+        const opp = game.getOpponentPlayer().getPieceAt(r, c);
+        if (me) cell.classList.add('mine');
+        if (opp) cell.classList.add('opp');
+        if (game.selectedPiece && game.selectedPiece.row === r && game.selectedPiece.col === c) {
+          cell.classList.add('selected');
+        }
+        if (game.getSelectedMoves().some(p => p.row === r && p.col === c)) {
+          cell.classList.add('highlight');
+        }
+      }
+    }
+  }
+
+  function renderAll() {
+    buildBoard();
+    updateBoardHighlights();
+    renderSticks(game.stickValue ?? null);
+    // Roll button enabled only when no current roll
+    if (rollBtn) rollBtn.disabled = game.stickValue != null;
+  }
+
+  // Event delegation for board clicks
+  if (boardEl) {
+    boardEl.addEventListener('click', (e) => {
+      const cell = e.target.closest('.board-cell');
+      if (!cell) return;
+      const r = +cell.dataset.row;
+      const c = +cell.dataset.col;
+
+      if (game.stickValue == null) {
+        setMessage('Roll first.');
+        return;
+      }
+
+      // Deselect if clicking the same selected piece
+      if (game.selectedPiece && game.selectedPiece.row === r && game.selectedPiece.col === c) {
+        game.clearSelection();
+        updateBoardHighlights();
+        return;
+      }
+
+      game.selectOrMoveAt(r, c);
+      renderAll();
+    });
+  }
+
+    function showIntro() {
+    intro && (intro.style.display = 'grid');
+    modeScreen && (modeScreen.style.display = 'none');
+    mainGrid && (mainGrid.style.display = 'none');
+  }
+  function showMode() {
+    intro && (intro.style.display = 'none');
+    modeScreen && (modeScreen.style.display = 'grid');
+    mainGrid && (mainGrid.style.display = 'none');
+  }
+  function showGame() {
+    intro && (intro.style.display = 'none');
+    modeScreen && (modeScreen.style.display = 'none');
+    mainGrid && (mainGrid.style.display = 'grid');
+    renderAll();
+  }
+
+  introStartBtn?.addEventListener('click', showMode);
+  modeBackBtn?.addEventListener('click', showIntro);
+
+  // Mode selection buttons just proceed to game for now
+  modeSingleBtn?.addEventListener('click', () => {
+    showGame();
+    setMessage('Mode selected: Single Player');
+  });
+  modeMultiBtn?.addEventListener('click', () => {
+    showGame();
+    setMessage('Mode selected: Multiplayer (Local)');
+  });
+  modeCpuBtn?.addEventListener('click', () => {
+    showGame();
+    setMessage('Mode selected: Player vs CPU');
+  });
+
+  // Side-panel Start (same as starting a game)
+  if (startSideBtn) {
+    startSideBtn.addEventListener('click', () => {
+      const cols = sizeInput ? parseInt(sizeInput.value, 10) || 9 : 9;
+      window.game = new TabGame(cols);
+      game = window.game;
+      showGame();
+      setMessage('Game started! Player’s turn.');
+    });
+  }
+
+  // Throw sticks
+  if (rollBtn) {
+    rollBtn.addEventListener('click', () => {
+      const val = game.startTurn();
+      renderSticks(val);
+      setMessage('');
+      if (game.autoSkipIfNoMoves()) {
+        setMessage('No legal moves. Turn passed.');
+      }
+      renderAll();
+    });
+  }
+
+  // Quit
+  if (quitBtn) {
+    quitBtn.addEventListener('click', () => {
+      window.game = null;
+      if (boardEl) boardEl.innerHTML = '';
+      if (sticksEl) sticksEl.innerHTML = '';
+      showIntro();
+      setMessage('Game quit.');
+    });
+  }
+
+  // Instructions
+  if (instrOpen && instrPanel) {
+    instrOpen.addEventListener('click', () => { instrPanel.style.display = 'block'; });
+  }
+  if (instrClose && instrPanel) {
+    instrClose.addEventListener('click', () => { instrPanel.style.display = 'none'; });
+  }
+
+  // Side panel (menu)
+  if (menuBtn && sidePanel) {
+    menuBtn.addEventListener('click', () => {
+      const isOpen = sidePanel.classList.toggle('open');
+      if (isOpen) {
+        sidePanel.style.width = '320px';
+        menuBtn.innerHTML = '&times;';
+        setTimeout(() => sidePanel.focus(), 10);
+      } else {
+        sidePanel.style.width = '0';
+        menuBtn.innerHTML = '&#9776;';
+      }
+    });
+  }
+  // Also open via the message button
+  openSidePanelBtn?.addEventListener('click', () => {
+    if (!sidePanel || !menuBtn) return;
+    sidePanel.classList.add('open');
+    sidePanel.style.width = '320px';
+    menuBtn.innerHTML = '&times;';
+    setTimeout(() => sidePanel.focus(), 10);
+  });
+
+  // Scoreboard open/close
+  if (scoreboardBtn && scoreboardPanel) {
+    scoreboardBtn.addEventListener('click', () => {
+      const isOpen = scoreboardPanel.classList.toggle('open');
+      scoreboardBtn.innerHTML = isOpen ? '&times;' : '🏆';
+      if (isOpen) setTimeout(() => scoreboardPanel.focus(), 10);
+    });
+    scoreboardPanel.addEventListener('click', (e) => {
+      if (e.target === scoreboardPanel) {
+        scoreboardPanel.classList.remove('open');
+        scoreboardBtn.innerHTML = '🏆';
+      }
+    });
+  }
+
+  // Live board-size preview (optional)
+  sizeInput?.addEventListener('change', () => {
+    const cols = parseInt(sizeInput.value, 10) || 9;
+    const firstIdx = game.curPlayerIdx;
+    window.game = new TabGame(cols);
+    game = window.game;
+    game.curPlayerIdx = firstIdx;
+    renderAll();
+    setMessage('Board size changed.');
+  });
+
+  // Initial UI state
+  showIntro();
+  setMessage('Welcome to Tâb! Click Start to begin.');
+});
+
+

@@ -82,7 +82,8 @@ class Piece {
 
   canVisitLastRow() {
     if (this.state === 'last-line') return false;
-    return this.owner.getpiecesByState('not-moved').length === 0;
+    const startRow = this.owner.startRow;
+    return !this.owner.pieces.some(p => p.row === startRow);
   }
 
   calculateLastLine() {
@@ -169,7 +170,7 @@ class TabGame {
     this.lastStickValue = null;
     this.selectedPiece = null;
     this.selectedMoves = [];
-    this.extraTurns = [4, 6];
+    this.extraTurns = [1, 4, 6];
   }
 
   initPlayers() {
@@ -212,7 +213,8 @@ class TabGame {
   }
 
   canUseLastRow(player = this.getCurrentPlayer()) {
-    return player.getpiecesByState('not-moved').length === 0;
+    const startRow = player.startRow;
+    return !player.pieces.some(p => p.row === startRow);
   }
 
   possibleMoves(piece, sticks) {
@@ -426,7 +428,7 @@ class TabGame {
     const arrowRows = [];
     const arrowFor = (r, c) => {
       const outs = Array.from(g.adj[g.coordToId(r, c)]);
-      if (outs.length === 2) return '*'; // branch at (2, last col)
+      if (outs.length === 2) return '*'; // branch at row 1, last col
       if (outs.length === 0) return '·';
       const { row, col } = g.idToCoord(outs[0]);
       if (row === r && col === c + 1) return '>';
@@ -469,16 +471,15 @@ class TabGame {
     this._assert(map.includes('*'), 'Expected branch (*) at row 1 last col');
 
     // 2) Jumping: pieces can jump over blockers; only final landing checked
-    // Use a piece that has already moved so it can take 2 steps
     const g3 = new TabGame(3);
     g3.debugReset([{row:3, col:0}], []);
-    g3.players[0].pieces[0].state = 'moved'; // allow sticks=2 on this piece
-    g3.startTurn(2); // two steps: 3,0 -> 3,1 -> 3,2
+    g3.players[0].pieces[0].state = 'moved'; // allow sticks=2
+    g3.startTurn(2);
     g3.selectPieceAt(3,0);
     let moves = g3.getSelectedMoves();
     g3._assert(moves.some(p => p.row === 3 && p.col === 2), 'Jumping two steps failed (no blocker)');
 
-    // Add a blocker at 3,1 (own piece). Should still be able to jump over, but not land on it.
+    // Add a blocker at 3,1 (own piece) -> still can land at 3,2; cannot land on 3,1
     g3.players[0].addPiece(new Piece(g3.players[0], 3, 1));
     g3.startTurn(2);
     g3.selectPieceAt(3,0);
@@ -486,23 +487,24 @@ class TabGame {
     g3._assert(moves.some(p => p.row === 3 && p.col === 2), 'Should jump over own piece at 3,1');
     g3._assert(!moves.some(p => p.row === 3 && p.col === 1), 'Should not land on own piece at 3,1');
 
-    // 3) Entering last row (row 0) is gated until all pieces have moved
+    // 3) Entering last row is blocked while any own piece is on startRow
     const g9 = new TabGame(9);
+    // Player starts on row 3; leave one piece on row 3 to block entry
     g9.debugReset(
-      [{row:1, col:8}, {row:3, col:0}], // current player pieces
+      [{row:1, col:8}, {row:3, col:0}],
       []
     );
     g9.startTurn(1);
     g9.selectPieceAt(1,8);
     moves = g9.getSelectedMoves();
-    g9._assert(!moves.some(p => p.row === 0 && p.col === 8), 'Should not enter last row while some pieces are not moved');
+    g9._assert(!moves.some(p => p.row === 0 && p.col === 8), 'Should not enter last row while a piece remains on start row');
 
-    // Mark all own pieces as moved, then entering last row should be allowed
-    g9.players[0].pieces.forEach(p => p.state = 'moved');
+    // Move that blocking piece off the start row, then entry is allowed
+    g9.players[0].pieces.find(p => p.row === 3).row = 2; // move off start row
     g9.startTurn(1);
     g9.selectPieceAt(1,8);
     moves = g9.getSelectedMoves();
-    g9._assert(moves.some(p => p.row === 0 && p.col === 8), 'Should allow entering last row after all pieces moved');
+    g9._assert(moves.some(p => p.row === 0 && p.col === 8), 'Should allow entering last row after start row is empty');
 
     console.log('Logic self-test passed.');
   }

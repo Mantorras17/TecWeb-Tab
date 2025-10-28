@@ -62,17 +62,28 @@ class Piece {
     this.owner = owner;
     this.row = row;
     this.col = col;
-    this.state = 'not-moved'; // not-moved, moved or last-line
+    this.state = 'not-moved'; // 'not-moved' || 'first-row' || 'moved' || 'last-row'
   }
 
   moveTo(newRow, newCol) {
     this.row = newRow;
     this.col = newCol;
+
+    const firstRow = this.owner.startRow;
+    const lastRow = this.calculateLastRow();
+
+    if (newRow === lastRow) {
+      this.state = 'last-row';
+      return;
+    }
+    if (newRow === firstRow) {
+      this.state = 'first-row';
+      return;
+    }
     if (this.state === 'not-moved') {
       this.state = 'moved';
-    }
-    if (newRow === this.calculateLastLine()) {
-      this.state = 'last-line';
+    } else if (this.state === 'first-row' && newRow !== firstRow) {
+      this.state = 'moved';
     }
   }
 
@@ -83,10 +94,10 @@ class Piece {
   canVisitLastRow() {
     if (this.state === 'last-line') return false;
     const startRow = this.owner.startRow;
-    return !this.owner.pieces.some(p => p.row === startRow);
+    return !this.owner.pieces.some(p => p !== this && p.row === startRow);
   }
 
-  calculateLastLine() {
+  calculateLastRow() {
     return 3 - this.owner.startRow;
   }
 }
@@ -221,7 +232,7 @@ class TabGame {
     if (!piece.canMoveFirst(sticks)) return [];
     const graph = this.board.graph;
     const startId = graph.coordToId(piece.row, piece.col);
-    const lastLine = piece.calculateLastLine();
+    const lastLine = piece.calculateLastRow();
 
     // Using BFS with k steps with rule-based pruning on edges
     let frontier = new Set([startId]);
@@ -233,7 +244,7 @@ class TabGame {
           const to = graph.idToCoord(nid);
           const enteringLastRow = (from.row !== lastLine) && (to.row === lastLine);
           if (enteringLastRow && !piece.canVisitLastRow()) return;
-          if (enteringLastRow && piece.state === 'last-line') return;
+          if (enteringLastRow && piece.state === 'last-row') return;
           next.add(nid);
         });
       });

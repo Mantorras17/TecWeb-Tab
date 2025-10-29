@@ -115,6 +115,29 @@
     overflow-y: auto;            /* allow scroll if long */
   }
 
+  #closePanel {
+    position: absolute;
+    top: 14px;
+    right: 18px;
+    background: rgba(76, 54, 41, 0.9);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    z-index: 650; /* above #sidePanel (600) and scrim (550) */;
+  }
+  
+  #closePanel:hover {
+    background: #3a2a20;
+    transform: scale(1.05);
+  }
+  
+
 /* Headings / labels inside the glass panel */
 #configurations-logo {
     font-size: 2em;
@@ -214,9 +237,10 @@
     opacity: 1; pointer-events: auto;
   }
   
-#sidePanel #closePanel {
-    display: none;
-}
+  #sidePanel #closePanel {
+    display: block;
+  }
+  
 
 /* Make z-order explicit so DOM order doesn't matter */
 #sidePanel        { position: fixed; z-index: 600; }  /* panel on top */

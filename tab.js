@@ -636,6 +636,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const mainGrid = document.getElementById('main-grid');
   const firstPlayerInput = document.getElementById('first-player');
   const difficultyInput = document.getElementById('difficulty');
+  const closePanelBtn = document.getElementById('closePanel');
 
   // Helpers
   function setMessage(text) {
@@ -915,6 +916,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // (Aqui podes adicionar lógica para verificar se é o CPU a começar)
     });
   }
+  
+ // Close side panel button
+  closePanelBtn?.addEventListener('click', closeSidePanel);
 
   // Throw sticks
   if (rollBtn) {

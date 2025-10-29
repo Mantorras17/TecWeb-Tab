@@ -69,45 +69,191 @@
     z-index: 1;                        /* behind header/messages */
   }
 
+/* === Side Panel — translucent glass === */
 #sidePanel {
     grid-area: sidePanel;
-    width: 0;
-    max-width: 90vw;
-    height: 100vh;
     position: fixed;
     top: 0;
     left: 0;
-    background: #333;
-    overflow-x: hidden;
-    transition: width 0.3s;
-    color: white;
+    height: 100vh;
+  
+    /* closed by default, open on :focus-within below */
+    width: 0;
+    max-width: 90vw;
+  
+    /* glass look (same palette as your overlays) */
+    background: linear-gradient(
+      to bottom,
+      rgba(245, 235, 225, 0.55),
+      rgba(245, 235, 225, 0.35)
+    );
+    border-right: 1px solid rgba(255,255,255,0.35);
+    backdrop-filter: blur(12px) saturate(1.05);
+    -webkit-backdrop-filter: blur(12px) saturate(1.05);
+  
+    /* soft depth */
+    box-shadow: 6px 0 24px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.25);
+  
+    overflow: hidden;            /* hide content when collapsed */
+    color: #2a2019;              /* darker text for contrast on light glass */
     padding: 20px 0 0 0;
-    z-index: 200;
+    z-index: 400;                /* above menu (your menu is 300) */
     pointer-events: auto;
-}
-
-#sidePanel:focus-within {
-    width: min(90vw, 320px);
-    pointer-events: auto;
-}
-
+  
+    transition: width 0.3s ease;
+  }
+/* Layout for the entire panel */
 #sidePanel-content {
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    max-width: 100vw;
-}
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 24px;                   /* space between sections */
+    padding: 24px 20px 40px 20px;
+    box-sizing: border-box;
+    width: 100%;
+    overflow-y: auto;            /* allow scroll if long */
+  }
 
-#sidePanel-logo {
-    font-size: 1.5em;
-    text-align: center;
-    margin-bottom: 10px;
-}
+/* Headings / labels inside the glass panel */
+#configurations-logo {
+    font-size: 2em;
+    font-weight: 600;              /* same boldness as labels */
+    text-align: left;              /* use left, not flex-start */
+    margin: 20px 0 50px 20px;
+    color: #3b2b22;                /* same as labels */
+    letter-spacing: 0.02em;        /* small polish for title feel */
+    text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+  }
+  
 
-#sidePanel-configs {
+  /* Config section: each control on its own line */
+  #configurations {
     display: flex;
-    flex-direction: column;
-    gap: 10px;
+    flex-direction: column;      /* stack vertically */
+    align-items: flex-start;
+    gap: 14px;                   /* spacing between label+select groups */
+    
+  }
+  
+
+/* Label on its own line, with space above */
+#configurations > label {
+    display: block;
+    font-weight: 600;
+    color: #3b2b22;
+    margin-top: 50px;            /* space ABOVE label */
+    margin-bottom: 6px;         /* space to its select */
+  }
+  
+  #configurations > label:first-of-type { margin-top: 0; }
+
+/* Bigger selection “rectangles” */
+#configurations > select {
+    width: 100%;
+    max-width: 220px;                   /* adjust to taste */
+    height: 42px;                       /* taller box */
+    padding: 8px 12px;                  /* thicker interior */
+    font-size: 1rem;                    /* bigger text */
+    border-radius: 10px;                /* softer corners */
+    border: 1px solid rgba(60,40,30,0.45);
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    box-shadow: inset 0 1px 2px rgba(255,255,255,0.35);
+    margin-bottom: 12px;                /* ⬅ space AFTER the select */
+  }
+
+  /* Optional: nicer focus */
+#configurations > select:focus {
+    outline: none;
+    border-color: #a37a5a;
+    box-shadow: 0 0 0 3px rgba(163,122,90,0.25);
+  }
+  
+  #configurations,
+  #controls {
+    padding-left: 15px;   /* ✅ use padding instead of margin */
+    padding-right: 20px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+
+/* keep selects full width relative to the new indent */
+#configurations > select {
+  width: 100%;
+  max-width: 240px;
+}
+
+
+  
+  /* Menu button stays the same; ensure it’s above the panel edge */
+  #menu-btn { z-index: 450; }
+  
+  /* Optional: high-contrast fallback for users who prefer less transparency */
+  @media (prefers-reduced-transparency: reduce) {
+    #sidePanel {
+      background: rgba(245,235,225,0.95);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+  }
+
+  /* Scrim behind side panel */
+#sidePanel-scrim {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.25);
+    opacity: 0; pointer-events: none;
+    transition: opacity .25s ease;
+    z-index: 350; /* below the panel, above content */
+  }
+  
+  /* Toggle this class with JS when you focus/open the panel */
+  #sidePanel-scrim.visible {
+    opacity: 1; pointer-events: auto;
+  }
+  
+#sidePanel #closePanel {
+    display: none;
+}
+
+/* Make z-order explicit so DOM order doesn't matter */
+#sidePanel        { position: fixed; z-index: 600; }  /* panel on top */
+#sidePanel-scrim  { position: fixed; z-index: 550; }  /* scrim under panel */
+#menu-btn         { position: fixed; z-index: 650; }  /* button above both */
+
+/* ensure scrim covers the full page */
+#sidePanel-scrim { inset: 0; }
+
+/* optional: when panel is closed, don't catch clicks at its zero width */
+#sidePanel:not(.open) { pointer-events: none; }
+#sidePanel.open       { pointer-events: auto; }
+
+
+#menu-btn {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 300;
+    background: #4c3629;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    width: 44px;
+    height: 44px;
+    font-size: 2em;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+#menu-btn:hover,
+#menu-btn:focus {
+    background: #444;
+    outline: none;
 }
 
 #header {
@@ -351,8 +497,16 @@
     0 0 0 3px #444 inset,
     0 8px 20px rgba(0, 0, 0, 0.25);
   transition: transform 0.3s ease;
+  display: inline-flex;         /* shrink-wrap to children */
+  width: max-content;           /* (belt + suspenders) */
 }
-
+  /* Let the board container grow with the grid */
+#board {
+    max-width: none !important;   /* overrides the earlier 800px cap */
+    width: max-content;           /* size to its contents */
+    margin: 10px auto;            /* keep it centered */
+  }
+  
 /* keep it consistent on tall screens */
 @media (min-height: 700px) {
     .board-box {
@@ -432,75 +586,6 @@
     margin: 4px 0;
     width: 100%;
   }
-  
-#sidePanel {
-    width: 0;
-    height: 100vh;
-    position: fixed;
-    top: 0;
-    left: 0;
-    background: #333;
-    overflow-x: hidden;
-    transition: width 0.3s;
-    color: white;
-    padding: 20px 0 0 0;
-    z-index: 200;
-    pointer-events: auto;
-}
-
-#sidePanel:focus-within {#messages .msg-box {
-    display: inline-block;
-    margin-top: 22px;
-    padding: 16px 28px;               /* bigger interior space */
-    border-radius: 16px;              /* softer corners */
-    background: linear-gradient(
-      to bottom,
-      rgba(255, 255, 255, 0.85),
-      rgba(240, 240, 240, 0.7)
-    );
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    box-shadow:
-      inset 0 1px 2px rgba(255, 255, 255, 0.4),
-      0 4px 10px rgba(0, 0, 0, 0.15);
-    color: #3b2b22;
-    font-weight: 500;
-    font-size: 1.05rem;               /* slightly larger text */
-    letter-spacing: 0.01em;
-    max-width: 700px;
-  }
-    width: 320px;
-    pointer-events: auto;
-}
-
-#sidePanel #closePanel {
-    display: none;
-}
-
-#menu-btn {
-    position: fixed;
-    top: 16px;
-    left: 16px;
-    z-index: 300;
-    background: #4c3629;
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    width: 44px;
-    height: 44px;
-    font-size: 2em;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.2s;
-}
-
-#menu-btn:hover,
-#menu-btn:focus {
-    background: #444;
-    outline: none;
-}
-
 
 .leaderboard-tab {
     background: #eee;
@@ -695,71 +780,94 @@
     transform: scale(1.05);
 }
 
-/* Intro / Landing screen */
+/* Intro / Landing screen — more translucent, same as overlay */
 #intro-screen {
     position: fixed;
     inset: 0;
-    background: radial-gradient(1200px 600px at 50% -10%, #ffffff, #f1f1f1 40%, #e8e8e8 70%, #e3e3e3 100%);
+  
+    background: rgba(245, 235, 225, 0.35);     /* translucent */
+    backdrop-filter: blur(10px) saturate(1.1);  /* frosted effect */
+    -webkit-backdrop-filter: blur(10px) saturate(1.1);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+  
+  
+    box-shadow: inset 0 0 30px rgba(255,255,255,0.15);
     display: grid;
     place-items: center;
     z-index: 1000;
+  
     transition: opacity 400ms ease, visibility 0s linear 400ms;
-}
-
-#intro-screen.hidden {
+  }
+  
+  #intro-screen.hidden {
     opacity: 0;
     visibility: hidden;
-    /* after fade */
-}
-
-.intro-card {
-    background: #ffffff;
-    border: 1px solid #d6d6d6;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
-    border-radius: 20px;
+  }
+  
+  /* Card uses the same translucency — unified look */
+  .intro-card {
+    background: rgba(255, 255, 255, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 24px;
     padding: 40px 36px;
-    width: min(520px, 90vw);
     text-align: center;
-}
-
-.intro-logo {
-    font-size: clamp(36px, 6vw, 64px);
-    font-weight: 800;
-    letter-spacing: 0.18em;
-    margin-bottom: 10px;
-}
-
-.intro-tagline {
+    box-shadow:
+      0 4px 22px rgba(0, 0, 0, 0.12),
+      inset 0 2px 4px rgba(255, 255, 255, 0.25);
+    width: min(520px, 90vw);
+  
+    backdrop-filter: blur(14px) saturate(1.1);
+    -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  }
+  
+  .intro-logo {
+    font-family: "Devonshire", cursive;
+    font-weight: 400;
+    font-style: normal;
+    font-size: clamp(3em, 8vw, 7em);
+    letter-spacing: 0.05em;
+    text-align: center;
+    margin: 12px 0 32px;
+  
+    /* NEW styles for white text with black border */
+    color: #4c3629;
+    -webkit-text-stroke: 2px white; /* clean black outline */
+    text-shadow:
+      2px 2px 2px rgba(0,0,0,0.5),
+      -2px -2px 2px rgba(0,0,0,0.5); /* fallback soft edge */
+      margin-bottom: 40px; /* creates room for the message bar */
+  }
+  
+  .intro-tagline {
     margin: 0 0 24px 0;
-    color: #555;
+    color: #3b2b22;
     font-size: 1.05rem;
-}
-
-.intro-start-btn {
+    opacity: 0.9;
+  }
+  
+  .intro-start-btn {
     font-size: 1.1rem;
     padding: 12px 24px;
     border-radius: 999px;
     border: none;
-    background: #111;
+    background: rgba(60, 40, 30, 0.8);
     color: #fff;
     cursor: pointer;
     transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-}
-
-.intro-start-btn:hover {
+  }
+  
+  .intro-start-btn:hover {
     transform: translateY(-1px);
-}
+    opacity: 0.9;
+  }
+  
 
 .intro-start-btn:active {
     transform: translateY(0);
     opacity: 0.9;
 }
 
-#intro-screen:not(.hidden) ~ #menu-btn,
-#mode-screen:not(.hidden) ~ #menu-btn {
-  display: none;
-}
 
 /* Mode Selection Screen */
 #mode-screen {
@@ -819,4 +927,32 @@
 .mode-btn:active {
     transform: translateY(0);
     opacity: 0.8;
+}
+
+/* Primary pill/glass button */
+.btn-primary {
+    font-size: 1.05rem;
+    padding: 10px 20px;
+    border-radius: 999px;
+    border: none;
+    background: rgba(60, 40, 30, 0.85);
+    color: #fff;
+    cursor: pointer;
+    transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255,255,255,.18);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  .btn-primary:hover  { transform: translateY(-1px); opacity: .95; }
+  .btn-primary:active { transform: translateY(0);     opacity: .9;  }
+  
+  /* Sticks area spacing */
+  #sticks-area { padding-top: 8px; }
+  #dice-of-sticks { gap: 10px; }
+
+/* message should take the exact pixel width we set via JS */
+#messages { display: flex; justify-content: center; }
+#messages .msg-box {
+  width: auto !important;     /* override the calc(...) */
+  max-width: none !important; /* no cap */
 }

@@ -34,9 +34,10 @@
     <!-- App (your current UI) -->
     <button id="menu-btn" aria-label="Open menu">&#9776;</button>
     <div id="main-grid">
+        <div id="sidePanel-scrim"></div>
         <aside id="sidePanel" tabindex="-1">
             <div id="sidePanel-content">
-                <div id="sidePanel-logo">LogoSymbol</div>
+                <div id="configurations-logo">Configurations</div>
                 <div id="sidePanel-configs">
                     <div id="configurations">
                         <label for="board-size">Board Size:</label>
@@ -92,7 +93,7 @@
         </main>
         <aside id="sticks-area">
             <div id="dice-of-sticks">
-                <button id="throw-sticks">Throw Sticks</button>
+                <button id="throw-sticks" class="btn-primary">Throw Sticks</button>
                 <div id="sticks-result"></div>
             </div>
         </aside>

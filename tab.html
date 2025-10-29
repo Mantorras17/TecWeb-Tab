@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Tâb Game</title>
     <link rel="stylesheet" href="tab.css">
     <link href="https://fonts.googleapis.com/css2?family=Devonshire&display=swap" rel="stylesheet">
@@ -31,9 +32,9 @@
     </div>
 
     <!-- App (your current UI) -->
-    <button id="menu-btn" aria-label="Open menu">&#9776;</button>
+    <button type="button" id="menu-btn" aria-label="Open menu">&#9776;</button>
     <div id="main-grid">
-        <aside id="sidePanel">
+        <aside id="sidePanel" tabindex="-1">
             <div id="sidePanel-content">
                 <div id="sidePanel-logo">LogoSymbol</div>
                 <div id="sidePanel-configs">
@@ -69,20 +70,48 @@
         <header id="header">
             <div id="logo-wrapper">
                 <div id="logo">TÂB</div>
-                <div id="messages"></div>
                 </div>
             </header>
         <div id="login-area">
             <div id="identification">
-                <span>User: <span id="user-id">Guest</span></span>
-                <div id="user-popover" style="display:none;">
-                    <!-- Popover content here -->
-                    <button>Profile</button>
-                    <button>Logout</button>
+                <div id="user-avatar">
+                    <img src="https://cdn-icons-png.flaticon.com/512/847/847969.png" alt="User Icon">
+                    <span id="user-id">Guest</span>
+                </div>
+
+                <div id="user-menu" class="hidden">
+                    <div class="menu-screen" id="menu-main">
+                        <button class="user-btn" id="btn-login">Login</button>
+                        <button class="user-btn" id="btn-signup">Sign Up</button>
+                    </div>
+
+                    <div class="menu-screen hidden" id="menu-login">
+                        <h3>Login</h3>
+                        <input type="text" placeholder="Username" id="login-user">
+                        <input type="password" placeholder="Password" id="login-pass">
+                        <div class="menu-actions">
+                            <button class="user-btn confirm">Enter</button>
+                            <button class="user-btn back-btn">← Back</button>
+                        </div>
+                    </div>
+
+                    <div class="menu-screen hidden" id="menu-signup">
+                        <h3>Sign Up</h3>
+                        <input type="text" placeholder="New Username" id="signup-user">
+                        <input type="password" placeholder="Password" id="signup-pass">
+                        <div class="menu-actions">
+                            <button class="user-btn confirm">Create</button>
+                            <button class="user-btn back-btn">← Back</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div id="messages"></div>
+        <div id="messages">
+            <div class="msg-box">
+              <button id="open-sidepanel" class="intro-start-btn">Open Menu</button>
+            </div>
+          </div>          
         <main id="main-content">
             <div id="board"></div>
         </main>
@@ -122,9 +151,9 @@
                 </div>
             </div>
         </div>
-    </div>
     <!-- Botão fixo para abrir o scoreboard -->
     <button id="scoreboard-btn" aria-label="Open scoreboard">🏆</button>
+    </div>
     <script src="tab.js"></script>
 </body>
 

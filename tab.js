@@ -603,8 +603,8 @@ document.addEventListener('DOMContentLoaded', () => {
         cell.dataset.col = String(c);
 
         // Piece layer
-        const me = game.getCurrentPlayer().getPieceAt(r, c);
-        const opp = game.getOpponentPlayer().getPieceAt(r, c);
+        const me = game.players[0].getPieceAt(r, c);
+        const opp = game.players[1].getPieceAt(r, c);
         if (me || opp) {
           const piece = document.createElement('div');
           piece.className = 'piece ' + (me ? 'p1' : 'p2') + ' ' + (me || opp).state;
@@ -686,20 +686,48 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-    function showIntro() {
-    intro && (intro.style.display = 'grid');
-    modeScreen && (modeScreen.style.display = 'none');
-    mainGrid && (mainGrid.style.display = 'none');
+  function showIntro() {
+    if (intro) {
+      intro.classList.remove('hidden');
+      intro.hidden = false;
+      intro.style.display = 'grid';
+    }
+    if (modeScreen) {
+      modeScreen.classList.add('hidden');
+      modeScreen.hidden = true;
+      modeScreen.style.display = 'none';
+    }
+    if (mainGrid) mainGrid.style.display = 'none';
   }
+
   function showMode() {
-    intro && (intro.style.display = 'none');
-    modeScreen && (modeScreen.style.display = 'grid');
-    mainGrid && (mainGrid.style.display = 'none');
+    if (intro) {
+      intro.classList.add('hidden');
+      intro.hidden = true;
+      intro.style.display = 'none';
+    }
+    if (modeScreen) {
+      modeScreen.classList.remove('hidden');
+      modeScreen.hidden = false;
+      modeScreen.style.display = 'grid';
+    }
+    if (mainGrid) mainGrid.style.display = 'none';
   }
+
   function showGame() {
-    intro && (intro.style.display = 'none');
-    modeScreen && (modeScreen.style.display = 'none');
-    mainGrid && (mainGrid.style.display = 'grid');
+    if (intro) {
+      intro.classList.add('hidden');
+      intro.hidden = true;
+      intro.style.display = 'none';
+    }
+    if (modeScreen) {
+      modeScreen.classList.add('hidden');
+      modeScreen.hidden = true;
+      modeScreen.style.display = 'none';
+    }
+    if (mainGrid) {
+      mainGrid.style.display = 'grid';
+    }
     renderAll();
   }
 

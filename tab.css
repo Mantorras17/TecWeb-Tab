@@ -448,7 +448,7 @@
     pointer-events: auto;
 }
 
-#sidePanel:focus-within {#messages .msg-box {
+#messages .msg-box {
     display: inline-block;
     margin-top: 22px;
     padding: 16px 28px;               /* bigger interior space */
@@ -467,10 +467,8 @@
     font-size: 1.05rem;               /* slightly larger text */
     letter-spacing: 0.01em;
     max-width: 700px;
-  }
-    width: 320px;
-    pointer-events: auto;
 }
+
 
 #sidePanel #closePanel {
     display: none;

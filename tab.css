@@ -381,28 +381,27 @@
     filter: sepia(0.2) brightness(1.1);
   }
   
-  /* Apply the skins with higher priority */
-  .piece.p1 { background-image: url("image4.jpeg") !important; }
-  .piece.p2 { background-image: url("image2.jpeg") !important; }
-  
-  
-  .piece:hover { transform: scale(1.08); }
-  
-  /* Optional: selected/last-move rings */
-  .piece.selected { box-shadow: 0 0 0 3px #ffd54f, 0 4px 10px rgba(0,0,0,.35); }
-  .piece.last-line { box-shadow: 0 0 0 3px #333, 0 4px 10px rgba(0,0,0,.35); }
-  
+/* Apply the skins with higher priority */
+.piece.p1 { background-image: url("image4.jpeg") !important; }
+.piece.p2 { background-image: url("image2.jpeg") !important; }
 
-.piece.not-moved {
-    opacity: 0.5;
+
+.piece:hover { transform: scale(1.08); }
+
+
+.piece.selected { /* peça quando selecionada fica destacada*/
+  /* Levanta a peça e aumenta-a ligeiramente */
+  transform: scale(1.1) translateY(-2px);
+  
+  /* Sombra mais pronunciada para dar a sensação de "levantado" */
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
+  
+  /* Garante que fica por cima de outras peças */
+  z-index: 10;
 }
 
-.piece.moved {
-    opacity: 0.8;
-}
-
+/* Estado: "Na última linha" */
 .piece.last-line {
-    opacity: 1;
     border: 2px solid #333;
 }
 
@@ -618,7 +617,7 @@
     bottom: 16px;
     right: 16px;
     z-index: 600;
-    background: #333;
+    background: #4c3629;
     color: #fff;
     border: none;
     border-radius: 50%;
@@ -875,4 +874,27 @@
   border: 1px solid #888;
   background: rgba(255,255,255,0.1);
   color: #fff;
+}
+
+/* Destaque das casas destino possíveis */
+.board-cell.highlight {
+  /*
+    Usamos a cor #ffd54f, a mesma de .piece.selected.
+    Importante: Temos de repetir as sombras 'inset' originais 
+    da .board-cell para que não desapareçam.
+  */
+  box-shadow:
+    0 0 12px 4px #ffd54f, /* brilho dourado */
+    
+    /* As sombras originais da .board-cell */
+    inset 0 2px 4px rgba(255,255,255,0.4),
+    inset 0 -2px 4px rgba(0,0,0,0.2),
+    0 2px 4px rgba(0,0,0,0.15);
+  
+  /* Mudar o cursor para indicar que é um alvo */
+  cursor: grab; 
+}
+
+.board-cell.highlight:active {
+    cursor: grabbing;
 }

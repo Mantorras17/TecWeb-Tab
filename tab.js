@@ -711,6 +711,12 @@ document.addEventListener('DOMContentLoaded', () => {
     boardEl.querySelectorAll('.board-cell').forEach(cell => {
       cell.classList.remove('selected', 'highlight', 'mine', 'opp');
     });
+
+    // Limpar destaques antigos das peças
+    boardEl.querySelectorAll('.piece.selected').forEach(piece => {
+      piece.classList.remove('selected');
+    });
+
     // Re-apply occupants and highlights
     for (let r = 0; r < game.rows; r++) {
       for (let c = 0; c < game.columns; c++) {
@@ -721,7 +727,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (me) cell.classList.add('mine');
         if (opp) cell.classList.add('opp');
         if (game.selectedPiece && game.selectedPiece.row === r && game.selectedPiece.col === c) {
-          cell.classList.add('selected');
+          const pieceEl = cell.querySelector('.piece');
+          if (pieceEl) {
+            pieceEl.classList.add('selected'); // aplicar 'selected' à peça
+          }
         }
         if (game.getSelectedMoves().some(p => p.row === r && p.col === c)) {
           cell.classList.add('highlight');

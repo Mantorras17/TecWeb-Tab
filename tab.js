@@ -607,8 +607,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const sizeInput = document.getElementById('board-size');
   const initialCols = sizeInput ? parseInt(sizeInput.value, 10) || 9 : 9;
 
-  // Single game instance
-  window.game = new TabGame(initialCols);
+  // Single game instance (will be created on 'Start')
+  let game;
+  window.game = null; // Começa como nulo
 
   // Elements (guarded: only use if present)
   const intro = document.getElementById('intro-screen');
@@ -633,6 +634,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const scoreboardBtn = document.getElementById('scoreboard-btn');
   const scoreboardPanel = document.getElementById('scoreboard-panel');
   const mainGrid = document.getElementById('main-grid');
+  const firstPlayerInput = document.getElementById('first-player');
+  const difficultyInput = document.getElementById('difficulty');
 
   // Helpers
   function setMessage(text) {
@@ -642,6 +645,22 @@ document.addEventListener('DOMContentLoaded', () => {
     box.className = 'msg-box';
     box.textContent = text || '';
     msgEl.appendChild(box);
+  }
+
+  //  Funções de controlo do Painel 
+  function openSidePanel() {
+    if (!sidePanel || !menuBtn) return;
+    sidePanel.classList.add('open');
+    sidePanel.style.width = '320px';
+    menuBtn.innerHTML = '&times;';
+    setTimeout(() => sidePanel.focus(), 10);
+  }
+
+  function closeSidePanel() {
+    if (!sidePanel || !menuBtn) return;
+    sidePanel.classList.remove('open');
+    sidePanel.style.width = '0';
+    menuBtn.innerHTML = '&#9776;';
   }
 
   window.setMessage = setMessage //para que setmessage seja acessível em qualquer parte do código
@@ -854,40 +873,57 @@ document.addEventListener('DOMContentLoaded', () => {
     if (mainGrid) {
       mainGrid.style.display = 'grid';
     }
-    renderAll();
   }
 
-  introStartBtn?.addEventListener('click', showMode);
-  modeBackBtn?.addEventListener('click', showIntro);
-
-  // Mode selection buttons just proceed to game for now
-  modeSingleBtn?.addEventListener('click', () => {
-    showGame();
-    setMessage('Mode selected: Single Player. Let´s start the game!');
+  // O botão "Intro Start" mostra o jogo e abre o painel
+  introStartBtn?.addEventListener('click', () => {
+    showGame(); // Mostra a grelha do jogo
+    openSidePanel(); // Força a abertura do painel
+    setMessage('Choose the configurations and click "Start" to play the game.');
   });
-  modeMultiBtn?.addEventListener('click', () => {
-    showGame();
-    setMessage('Mode selected: Multiplayer (Local). Let´s start the game!');
-  });
-  modeCpuBtn?.addEventListener('click', () => {
-    showGame();
-    setMessage('Mode selected: Player vs CPU. Let´s start the game!');
-  });
-
-  // Side-panel Start (same as starting a game)
+  
+  // Side-panel Start (início real do jogo)
   if (startSideBtn) {
     startSideBtn.addEventListener('click', () => {
+      // Ler as configurações do painel
       const cols = sizeInput ? parseInt(sizeInput.value, 10) || 9 : 9;
-      window.game = new TabGame(cols);
-      game = window.game;
-      showGame();
+      const firstPlayer = firstPlayerInput ? firstPlayerInput.value : 'player';
+      const difficulty = difficultyInput ? difficultyInput.value : 'easy';
+
+      // Criar a instância do jogo
+      game = new TabGame(cols);
+      window.game = game; // Expor globalmente
+
+      // Aplicar as configurações lidas
+      
+      // Mapeia o <select> para o nível (0=fácil, 1=médio, 2=difícil)
+      // que a tua função cpuMove() espera
+      const diffMap = { 'easy': 0, 'medium': 1, 'hard': 2 };
+      game.difficultyLevel = diffMap[difficulty] || 0;
+
+      // Define o jogador inicial (0 = player, 1 = cpu)
+      game.curPlayerIdx = (firstPlayer === 'cpu') ? 1 : 0;
+
+      // Renderizar o tabuleiro
+      renderAll();
+      
+      // Fechar o painel
+      closeSidePanel();
+
+      // Enviar mensagem
       setMessage('Game started! Player’s turn.');
+      // (Aqui podes adicionar lógica para verificar se é o CPU a começar)
     });
   }
 
   // Throw sticks
   if (rollBtn) {
     rollBtn.addEventListener('click', () => {
+      if (!game) {
+        setMessage('Choose the configurations and click "Start" to play the game.');
+        return;
+      }
+      setMessage('Choose a piece and move it.');
       setMessage('Choose a piece and move it.');
       const val = game.startTurn();
       renderSticks(val);
@@ -923,25 +959,16 @@ document.addEventListener('DOMContentLoaded', () => {
   // Side panel (menu)
   if (menuBtn && sidePanel) {
     menuBtn.addEventListener('click', () => {
-      const isOpen = sidePanel.classList.toggle('open');
+      const isOpen = sidePanel.classList.contains('open');
       if (isOpen) {
-        sidePanel.style.width = '320px';
-        menuBtn.innerHTML = '&times;';
-        setTimeout(() => sidePanel.focus(), 10);
+        closeSidePanel();
       } else {
-        sidePanel.style.width = '0';
-        menuBtn.innerHTML = '&#9776;';
+        openSidePanel();
       }
     });
   }
   // Also open via the message button
-  openSidePanelBtn?.addEventListener('click', () => {
-    if (!sidePanel || !menuBtn) return;
-    sidePanel.classList.add('open');
-    sidePanel.style.width = '320px';
-    menuBtn.innerHTML = '&times;';
-    setTimeout(() => sidePanel.focus(), 10);
-  });
+  openSidePanelBtn?.addEventListener('click', openSidePanel);
 
   // Scoreboard open/close
   if (scoreboardBtn && scoreboardPanel) {
@@ -960,6 +987,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Live board-size preview (optional)
   sizeInput?.addEventListener('change', () => {
+    if (!game) {
+      setMessage('Choose the configurations and click "Start" to play the game.');
+      // Reverte o valor se o jogo não tiver começado
+      if (game) sizeInput.value = String(game.columns); 
+      return;
+    }
     const cols = parseInt(sizeInput.value, 10) || 9;
     const firstIdx = game.curPlayerIdx;
     window.game = new TabGame(cols);

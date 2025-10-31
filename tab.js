@@ -628,7 +628,28 @@ document.addEventListener('DOMContentLoaded', () => {
   const scoreboardBody = document.getElementById('scoreboard-body'); // Do 'main'
   const noScoresMsg = document.getElementById('no-scores-msg'); // Do 'main'
   const sticksUI = { busy: false, queue: [] }; // Do 'HEAD' (animação)
-  // --- FIM MERGE ---
+  // === Global timing (slower pacing) ===
+  const TIMING = {
+    // Sticks flip animation + any code that waits for that reveal
+    flipAnimMs: 1100,        // was 600
+
+    // CPU pacing
+    cpuStartMs: 1200,        // was 100 / 2000 (normalize both)
+    cpuThinkMs: 2500,        // was 1600
+    cpuAfterPlayMs: 2500,    // was 800/1400/1800 in places (normalize)
+    cpuChainMs: 1200,        // was 100
+
+    // Human → CPU handoff delay after your move
+    humanToCpuMs: 4000,      // was 1000
+
+    // Messaging tweaks
+    skipMsgDelayMs: 1000,    // already 1000, keep
+    pvpPromptDelayMs: 2200,  // was 1500
+  };
+
+  function sticksToGrey(delayMs = 0) {
+    setTimeout(() => renderSticks(null, { force: true, animate: false }), delayMs);
+  }
 
   // --- Helpers do 'HEAD' (animação) ---
   function hide(el){ if(el){ el.classList.add('hidden'); el.style.display = 'none'; } }
@@ -785,7 +806,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (animate) {
         img.style.animation = 'none';
         void img.offsetWidth;
-        img.style.animation = 'stickFlip 0.6s ease-in-out forwards';
+        img.style.animation = `stickFlip ${TIMING.flipAnimMs}ms ease-in-out forwards`;
       }
       strip.appendChild(img);
     });
@@ -817,7 +838,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tasks.forEach(fn => fn());
     };
 
-    if (animate) setTimeout(reveal, 600);
+    if (animate) setTimeout(reveal, TIMING.flipAnimMs);
     else reveal();
   }
 
@@ -930,73 +951,95 @@ document.addEventListener('DOMContentLoaded', () => {
   function maybeCpuTurn() {
     if (!game || game.over) return;
     const cur = game.getCurrentPlayer();
-    // Lógica de guarda do 'main' (corrigida)
-    if (cur.name !== 'cpu' || game.isVsPlayer) return; 
+    if (cur.name !== 'cpu' || game.isVsPlayer) return;
+  
+    cpuBusy = true;
+    queueAfterFlip(updateRollBtn);
 
-    cpuBusy = true; // Lógica do 'main'
-    queueAfterFlip(updateRollBtn);  
-    renderSticks(null); // UI do 'HEAD'
+    setMessage("Player 2's turn");
 
-    const run = () => { // Estrutura do 'main'
+    // show grey sticks while the message is visible
+    renderSticks(null, { force: true, animate: false });
+  
+    const run = () => {
       cpuTimer = null;
       if (!game || game.over || game.getCurrentPlayer().name !== 'cpu' || game.isVsPlayer) {
-         cpuBusy = false; return;
+        cpuBusy = false;
+        return;
       }
-
+  
+      // CPU rolls (this sets game.lastSticks)
       const val = game.startTurn();
-      queueAfterFlip(updateRollBtn);  
-      renderSticks({ value: val, sticks: game.lastSticks }, { animate: true }); // UI do 'HEAD'
-      renderAll({ updateSticks: false });
-      if (val === 1) msgAfterFlip(`CPU rolled ${val} move`);
-      else           msgAfterFlip(`CPU rolled ${val} moves`);
-      
-      // Lógica de "jogar"
-      setTimeout(() => {
-        const skipped = game.autoSkipIfNoMoves(); // Lógica do 'main'
-        
-        if (skipped) {
-          const nextPlayer = game.getCurrentPlayer();
-          let skipMessage = "";
-          if (nextPlayer === cur) { // Rolou 1,4,6
-             skipMessage = "No possible moves. Roll again!";
-          } else { // Rolou 2,3
-             skipMessage = "No possible moves. Turn passed.";
+      queueAfterFlip(updateRollBtn);
+  
+      // ✅ Ensure the flip animation runs AFTER any prior tasks,
+      // and only show "CPU rolled..." AFTER the flip reveal (not grey)
+      queueAfterFlip(() => {
+        renderSticks({ value: val, sticks: game.lastSticks }, { animate: true });
+        renderAll({ updateSticks: false });
+        msgAfterFlip(val === 1 ? `Player 2 got ${val} move` : `Player 2 got ${val} moves`, 0);
+      });
+  
+      // ⬇️ Only start "thinking" AFTER the flip reveal finished
+      queueAfterFlip(() => {
+        setTimeout(() => {
+          const skipped = game.autoSkipIfNoMoves();
+  
+          if (skipped) {
+            const nextPlayer = game.getCurrentPlayer();
+            const skipMessage =
+              (nextPlayer === cur)
+                ? "No possible moves. Throwing sticks again"
+                : "No possible moves. Turn passed";
+  
+            msgAfterFlip(skipMessage, 0);
+  
+            // After a short pause, grey the sticks and proceed
+            setTimeout(() => {
+              renderAll({ updateSticks: false });
+              sticksToGrey(0);
+  
+              if (nextPlayer.name === 'cpu') {
+                // CPU keeps the turn → chain
+                setTimeout(maybeCpuTurn, TIMING.cpuChainMs);
+              } else {
+                // Turn passed to human
+                setTimeout(() => {
+                  msgAfterFlip("Your turn, player 1!");
+                  queueAfterFlip(updateRollBtn);
+                  cpuBusy = false;
+                }, TIMING.skipMsgDelayMs);
+              }
+            }, TIMING.skipMsgDelayMs);
+  
+            return;
           }
-          
-          msgAfterFlip(skipMessage, 1000); // UI do 'HEAD'
-          
-          queueAfterFlip(() => { // UI do 'HEAD'
-            renderAll(); // Re-ativa 'rollBtn' para o jogador
-            if (nextPlayer.name === 'cpu') {
-              maybeCpuTurn(); // CPU joga de novo
+  
+          // Not skipped: CPU actually plays
+          game.cpuMove();
+          renderAll({ updateSticks: false });
+          sticksToGrey(0);
+          msgAfterFlip('Player 2 played');
+  
+          // After CPU’s move
+          setTimeout(() => {
+            if (game.getCurrentPlayer().name === 'cpu') {
+              msgAfterFlip('Player 2 plays again');
+              setTimeout(maybeCpuTurn, TIMING.cpuChainMs);
             } else {
-              msgAfterFlip("Your turn!", 1500); // Lógica do 'main'
+              msgAfterFlip('Your turn, player 1!');
+              queueAfterFlip(updateRollBtn);
               cpuBusy = false;
             }
-          });
-          return;
-        }
-
-        // Não foi "skip", o CPU joga
-        game.cpuMove(); // Lógica do 'main' (usa dificuldade)
-        renderAll({ updateSticks: false });
-        msgAfterFlip('CPU played');
-
-        setTimeout(() => {
-          if (game.getCurrentPlayer().name === 'cpu') {
-            msgAfterFlip('CPU plays again!');
-            setTimeout(maybeCpuTurn, 100);
-          } else {
-            msgAfterFlip('Your turn!');
-            queueAfterFlip(updateRollBtn);
-            cpuBusy = false;
-          }
-        }, 800); // Compromisso de tempo
-      }, 1000); // Compromisso de tempo
+          }, TIMING.cpuAfterPlayMs);
+        }, TIMING.cpuThinkMs); // CPU "thinking" time
+      });
     };
-    setTimeout(run, 1000); // Compromisso de tempo
+  
+    setTimeout(run, TIMING.cpuStartMs); // delay before CPU starts its roll
   }
-
+  
+  
   // --- MERGE: `boardEl` (lógica do 'main', UI do 'HEAD') ---
   // Esta é a função correta (select-vs-move) do 'main'
   if (boardEl) {
@@ -1004,7 +1047,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!game || game.over) return;
       const currentPlayer = game.getCurrentPlayer();
       if (currentPlayer.name === 'cpu' && !game.isVsPlayer) {
-        setMessage('Wait for CPU.');
+        setMessage('Wait for Player 2');
         return;
       }
       const cell = e.target.closest('.board-cell');
@@ -1012,7 +1055,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const r = +cell.dataset.row;
       const c = +cell.dataset.col;
       if (game.stickValue == null) {
-        setMessage('Roll first'); // Corrigido
+        setMessage('Throw sticks first!'); // Corrigido
         return;
       }
       if (messageTimer) {
@@ -1037,13 +1080,14 @@ document.addEventListener('DOMContentLoaded', () => {
           // --- Jogada feita ---
           // MERGE: updateSticks: false (para não estragar animação)
           renderAll({ updateSticks: false }); 
+          sticksToGrey(0);
           if (checkGameOver()) return; 
 
           const nextPlayer = game.getCurrentPlayer();
           if (nextPlayer.name === 'cpu' && !game.isVsPlayer) {
-            setMessage('CPU´s turn');
+            setMessage("Player 2's turn");
             // MERGE: usa queueAfterFlip
-            queueAfterFlip(maybeCpuTurn, 1000); 
+            queueAfterFlip(maybeCpuTurn, TIMING.humanToCpuMs);
           } else {
             if (nextPlayer === currentPlayer) {
               if (game.isVsPlayer) {
@@ -1108,7 +1152,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (mainGrid) {
       mainGrid.style.display = 'grid';
     }
-    show(rollBtn); // UI do 'HEAD'
+    hide(rollBtn);
   }
 
   // Scoreboard a 3 (do 'main')
@@ -1207,7 +1251,7 @@ document.addEventListener('DOMContentLoaded', () => {
   introStartBtn?.addEventListener('click', () => {
     showGame();
     openSidePanel();
-    setMessage('Choose the configurations and click "Start" to play the game.');
+    setMessage('Choose the configurations and click "Start" to play the game!');
   });
   
   // --- MERGE: `startSideBtn` (lógica do 'main', UI do 'HEAD') ---
@@ -1261,12 +1305,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const currentPlayer = game.getCurrentPlayer();
       if (currentPlayer.name === 'cpu') {
-        setMessage('Game started! CPU plays first.');
-        setTimeout(maybeCpuTurn, 100);
+        setMessage('Game started. Player 2 plays first!');
+        setTimeout(maybeCpuTurn, TIMING.cpuStartMs);
       } else if (currentPlayer.name === 'player1') {
-        setMessage('Game started! Player 1, your turn.');
+        setMessage('Game started. Player 1, your turn!');
       } else if (currentPlayer.name === 'player2') {
-        setMessage('Game started! Player 2, your turn.');
+        setMessage('Game started. Player 2, your turn!');
       }
     });
   }
@@ -1279,9 +1323,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // Guarda 'canPlayerRoll' do 'HEAD'
       if (!canPlayerRoll()) {
         const turn = game.getCurrentPlayer()?.name;
-        if (turn === 'cpu') setMessage('Wait — CPU turn');
+        if (turn === 'cpu') setMessage("Wait — Player 2's turn");
         else if (sticksUI.busy) setMessage('Throwing sticks in progress…');
-        else setMessage('You already threw. Move a piece');
+        else setMessage('You already threw. Move a piece!');
         return;
       }
 
@@ -1295,7 +1339,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const val = game.startTurn();
       updateRollBtn(); // UI do 'HEAD'
       renderSticks({ value: val, sticks: game.lastSticks }, { animate: true }); // UI do 'HEAD'
-      
+      // Tell the player what they rolled (queued to appear after the flip reveal)
+      const rolledText = (val === 1) ? 'You got 1 move' : `You got ${val} moves`;
+      msgAfterFlip(rolledText, 0);
+
+
       const skipped = game.autoSkipIfNoMoves(); // Lógica do 'main'
       
       if (skipped) {
@@ -1307,35 +1355,50 @@ document.addEventListener('DOMContentLoaded', () => {
           if (nextPlayer === currentPlayer) { // Rolou 1,4,6
             if (game.isVsPlayer) {
               const P1_name = game.players[0].name;
-              skipMessage = `${currentPlayer.name === P1_name ? 'Player 1' : 'Player 2'} has no moves. Roll again!`;
+              skipMessage = `${currentPlayer.name === P1_name ? 'Player 1' : 'Player 2'} has no moves. Throw sticks again!`;
             } else {
-              skipMessage = "No possible moves. Roll again!";
+              skipMessage = "No possible moves. Throw sticks again!";
             }
           } else { // Rolou 2,3
-            skipMessage = "No possible moves. Turn passed.";
+            skipMessage = "No possible moves. Turn passed";
           }
           
-          setMessage(skipMessage);
-          renderAll(); // Re-ativa 'rollBtn'
+          // keep the board update, but don't touch sticks yet
+          renderAll({ updateSticks: false });
+
+          // ✅ Ensure the pass message appears first, THEN grey the sticks shortly after
+          queueAfterFlip(() => {
+            setMessage(skipMessage);                // show "No possible moves. Turn passed."
+            setTimeout(() => sticksToGrey(0), 50);  // grey strictly after the message is visible
+          }, TIMING.skipMsgDelayMs);
+
 
           if (nextPlayer.name === 'cpu' && !game.isVsPlayer) {
-            maybeCpuTurn();
-          } else if (game.isVsPlayer && nextPlayer !== currentPlayer) {
+            // We’re already inside a queued block. First show the pass msg, then grey,
+            // then, after that breath, kick the CPU (so its flip can safely animate).
+            setTimeout(() => {
+              // One more tiny wait ensures the grey render just finished painting
+              setTimeout(maybeCpuTurn, TIMING.cpuStartMs);
+            }, TIMING.skipMsgDelayMs + 60);
+          }
+           else if (game.isVsPlayer && nextPlayer !== currentPlayer) {
             const P1_name = game.players[0].name;
             const P2_name = game.players[1].name;
             messageTimer = setTimeout(() => {
               if (game.getCurrentPlayer() === nextPlayer && game.stickValue === null) {
                 setMessage(`${nextPlayer.name === P1_name ? 'Player 1' : 'Player 2'}, your turn!`);
               }
-            }, 1500); 
+            },  TIMING.pvpPromptDelayMs); 
           }
-        }, 600); // 600ms = Duração da animação 'stickFlip'
+        }, TIMING.flipAnimMs); // 600ms = Duração da animação 'stickFlip'
 
         return; 
       }
       
-      msgAfterFlip('Choose a piece to move.'); // UI do 'HEAD'
-      renderAll({ updateSticks: false }); // UI do 'HEAD'
+      // give the rolled message a tiny moment, then prompt
+      msgAfterFlip('Choose a piece to move!', 600);
+      renderAll({ updateSticks: false });
+
     });
   }
 
@@ -1357,7 +1420,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let winnerDisplay = winnerPlayer.name.toUpperCase();
         if (winnerPlayer.name === 'player1') winnerDisplay = 'Player 1';
         if (winnerPlayer.name === 'player2') winnerDisplay = 'Player 2';
-        quitMessage = `Game forfeited. ${winnerDisplay} wins.`;
+        quitMessage = `Game forfeited. ${winnerDisplay} wins`;
       }
       window.game = null;
       if (boardEl) boardEl.innerHTML = '';
@@ -1373,7 +1436,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // 'setTimeout' do 'main' (é útil)
       setTimeout(() => {
         if (!window.game) {
-          setMessage('Choose the configurations and click "Start" to play the game.');
+          setMessage('Choose the configurations and click "Start" to play the game');
         }
       }, 3000); 
     });
@@ -1415,7 +1478,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Listeners de Configurações (do 'main', que é mais robusto)
   function settingChangeListener() {
     if (window.game) {
-      setMessage('Setting changed. Click "Start" to begin a new game with this setting.');
+      setMessage('Setting changed. Click "Start" to begin a new game with this setting');
     }
   }
   sizeInput?.addEventListener('change', settingChangeListener);
@@ -1463,5 +1526,5 @@ document.addEventListener('DOMContentLoaded', () => {
   updateScoreboardView();
   updateFirstPlayerOptions(); 
   showIntro();
-  setMessage('Welcome to Tâb! Click Start to begin.'); // Mensagem do 'main'
+  setMessage('Welcome to Tâb! Click Start to begin'); // Mensagem do 'main'
 });

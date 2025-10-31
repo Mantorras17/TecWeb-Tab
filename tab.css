@@ -143,7 +143,7 @@
     font-size: 2em;
     font-weight:600;              /* same boldness as labels */
     text-align: left;              /* use left, not flex-start */
-    margin: 32px 0 29px 35px;
+    margin: 32px 0 15px 35px;
     color: #3b2b22;                /* same as labels */
     letter-spacing: 0.02em;        /* small polish for title feel */
     text-shadow: 0 1px 0 rgba(255,255,255,0.5);
@@ -155,7 +155,7 @@
     display: flex;
     flex-direction: column;      /* stack vertically */
     align-items: flex-start;
-    gap: 20px;                   /* spacing between label+select groups */
+    gap: 5px;                   /* spacing between label+select groups */
     
   }
   
@@ -275,7 +275,7 @@
   align-items: center;
   justify-content: center;
   gap: 30px;
-  padding: 60px 0px 40px 3px;
+  padding: 50px 0px 40px 3px;
 }
 
   

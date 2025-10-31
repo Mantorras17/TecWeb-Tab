@@ -182,6 +182,7 @@ class TabGame {
     this.selectedPiece = null;
     this.selectedMoves = [];
     this.extraTurns = [1, 4, 6];
+    this.lastSticks = [0, 0, 0, 0];  
   }
 
   initPlayers() {
@@ -204,6 +205,7 @@ class TabGame {
     const value = (sum === 0) ? 6 : sum;
     this.stickValue = value;
     this.lastStickValue = value;
+    this.lastSticks = sticks;
     return { sticks, value };
   }
 
@@ -637,7 +639,27 @@ document.addEventListener('DOMContentLoaded', () => {
   const firstPlayerInput = document.getElementById('first-player');
   const difficultyInput = document.getElementById('difficulty');
   const closePanelBtn = document.getElementById('closePanel');
+  const sticksUI = { busy: false, queue: [] }; // flip animation in progress? + queued work
 
+  function hide(el){ if(el){ el.classList.add('hidden'); el.style.display = 'none'; } }
+  function show(el){ if(el){ el.classList.remove('hidden'); el.style.display = ''; } }
+
+  hide(rollBtn);
+
+  function queueAfterFlip(cb, delay = 0) {
+    // Run now if not flipping; otherwise enqueue to run right after reveal
+    if (!sticksUI.busy) {
+      setTimeout(cb, delay);
+      return;
+    }
+    sticksUI.queue.push(() => setTimeout(cb, delay));
+  }
+  
+  // Call this instead of setMessage(...) when you want it to wait for the flip
+  function msgAfterFlip(text, delay = 0) {
+    queueAfterFlip(() => setMessage(text), delay);
+  }
+  
   // Helpers
   function setMessage(text) {
     if (!msgEl) return;
@@ -647,12 +669,26 @@ document.addEventListener('DOMContentLoaded', () => {
     box.textContent = text || '';
     msgEl.appendChild(box);
   }
-
+  function canPlayerRoll() {
+    if (!game) return false;
+    if (sticksUI.busy) return false;                 // flipping animation running
+    const cur = game.getCurrentPlayer();
+    if (!cur || cur.name !== 'player') return false; // not your turn
+    return game.stickValue == null;                  // already rolled this turn?
+  }
+  
+  function updateRollBtn() {
+    if (!rollBtn) return;
+    const enabled = canPlayerRoll();
+    rollBtn.disabled = !enabled;
+    rollBtn.setAttribute('aria-disabled', String(!enabled));
+  }
+  
   //  Funções de controlo do Painel 
   function openSidePanel() {
     if (!sidePanel || !menuBtn) return;
     sidePanel.classList.add('open');
-    sidePanel.style.width = '320px';
+    sidePanel.style.width = '360px';
     menuBtn.innerHTML = '&times;';
     setTimeout(() => sidePanel.focus(), 10);
   }
@@ -665,14 +701,107 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   window.setMessage = setMessage //para que setmessage seja acessível em qualquer parte do código
+// --- change renderSticks signature + logic ---
+function renderSticks(valueOrResult, opts = {}) {
+  if (!sticksEl) return;
 
-  function renderSticks(valueOrResult) {
-    if (!sticksEl) return;
-    sticksEl.innerHTML = '';
-    const value = typeof valueOrResult === 'number' ? valueOrResult : valueOrResult?.value;
-    if (value == null) return;
-    sticksEl.innerHTML += ` &rarr; <b>${value}</b>`;
+  const force = opts.force === true;       // allow overriding busy state
+  const animate = opts.animate !== false;  // default = animate
+
+  // Respect busy state unless forced
+  if (sticksUI.busy && !force) return;
+
+  // Reset content
+  sticksEl.innerHTML = '';
+
+  // Detect if a roll value exists
+  const hasValue =
+    typeof valueOrResult === 'number' ||
+    (valueOrResult && valueOrResult.value != null);
+
+  // Idle/grey sticks
+  if (!hasValue) {
+    const strip = document.createElement('div');
+    strip.className = 'stick-strip';
+    strip.style.perspective = '1000px';
+    for (let i = 0; i < 4; i++) {
+      const img = document.createElement('img');
+      img.className = 'stick-img inactive';
+      img.src = 'image2.jpeg';
+      strip.appendChild(img);
+    }
+    const label = document.createElement('div');
+    label.className = 'sticks-label';
+    sticksEl.appendChild(strip);
+    sticksEl.appendChild(label);
+    return;
   }
+
+  // We are going to animate a flip -> mark busy
+  sticksUI.busy = animate;
+
+  const value = typeof valueOrResult === 'number'
+    ? valueOrResult
+    : valueOrResult.value;
+
+  const faces =
+    typeof valueOrResult === 'object' && valueOrResult.sticks
+      ? valueOrResult.sticks
+      : window.game?.lastSticks?.length
+      ? window.game.lastSticks
+      : [0, 0, 0, 0];
+
+  const strip = document.createElement('div');
+  strip.className = 'stick-strip';
+  strip.style.perspective = '1000px';
+
+  faces.forEach(() => {
+    const img = document.createElement('img');
+    img.className = 'stick-img inactive';
+    img.src = 'image2.jpeg';
+    if (animate) {
+      img.style.animation = 'none';
+      void img.offsetWidth;
+      img.style.animation = 'stickFlip 0.6s ease-in-out forwards';
+    }
+    strip.appendChild(img);
+  });
+
+  const label = document.createElement('div');
+  label.className = 'sticks-label';
+  label.innerHTML = animate ? '<i>Rolling...</i>' : `&rarr; <b>${value}</b>`;
+
+  sticksEl.appendChild(strip);
+  sticksEl.appendChild(label);
+
+  // Reveal faces after flip
+  const reveal = () => {
+    strip.innerHTML = '';
+    faces.forEach((v) => {
+      const img = document.createElement('img');
+      img.className = 'stick-img ' + (v === 1 ? 'light' : 'dark') + ' active';
+      img.alt = v === 1 ? 'Flat side (light)' : 'Round side (dark)';
+      img.src = v === 1 ? 'image4.jpeg' : 'image2.jpeg';
+      strip.appendChild(img);
+    });
+    if(value === 1) {
+      label.innerHTML = `<b>${value} move</b>`;
+    }
+    else{
+    label.innerHTML = `<b>${value} moves</b>`;}
+    sticksUI.busy = false; // ✅ unlock
+    // Flush any queued messages/tasks that waited for the flip
+    const tasks = sticksUI.queue.splice(0, sticksUI.queue.length);
+    tasks.forEach(fn => fn());
+
+  };
+
+  if (animate) setTimeout(reveal, 600);
+  else reveal();
+}
+
+  
+
 
   // Build/Render board (no arrows, clean layout)
   function buildBoard() {
@@ -758,46 +887,72 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   }
-
-  function renderAll() {
+  function renderAll(opts = { updateSticks: true }) {
     buildBoard();
     updateBoardHighlights();
-    renderSticks(game.stickValue ?? null);
-    // Roll button enabled only when no current roll
-    if (rollBtn) rollBtn.disabled = game.stickValue != null;
+    if (opts.updateSticks) {
+      renderSticks(game.stickValue ?? null, { animate: false });
+    }
+    updateRollBtn();
   }
+  
 
   // CPU turn handler 
   function maybeCpuTurn() {
     const cur = game.getCurrentPlayer();
     if (cur.name !== 'cpu') return; // só joga se for o CPU
-
+    queueAfterFlip(updateRollBtn);  
+    // grey sticks while CPU is "thinking" before its roll
+    renderSticks(null);
     // Pausa antes de lançar
     setTimeout(() => {
       const val = game.startTurn();
-      renderSticks(val);
-      renderAll();
-      setMessage(`CPU rolled: ${val}`);
+      queueAfterFlip(updateRollBtn);  
+      renderSticks({ value: val, sticks: game.lastSticks }, { animate: true });
+      renderAll({ updateSticks: false });   // ✅ do not overwrite
+      if (val === 1)  msgAfterFlip(`CPU got ${val} move`);
+      else            msgAfterFlip(`CPU got ${val} moves`);
+      
 
-      // Outra pausa antes de mover
+  // Outra pausa antes de mover
+  setTimeout(() => {
+    // ✅ Check if CPU can actually move
+    const legalMoves = game.getAllLegalMoves();
+    if (legalMoves.length === 0) {
+      msgAfterFlip('No legal moves. Passing turn...');
+      // brief pause so the player can read it
       setTimeout(() => {
-        game.cpuMoveHeuristic(); // ou cpuMoveRandom()
-        renderAll();
-        setMessage('CPU played.');
+        game.endTurn(false);                               // hand over to player
+        renderSticks(null, { force: true, animate: false }); // reset sticks immediately
+        msgAfterFlip('Your turn!');                        // message after flip queue
+        queueAfterFlip(updateRollBtn);                     // enable/disable button after flip queue
+      }, 1000);      
+      return; // stop here; CPU doesn't play
+    }
 
-        // Pequeno delay antes de decidir se joga de novo
-        setTimeout(() => {
-          if (game.playAgain()) {
-            setMessage('CPU plays again!');
-            setTimeout(maybeCpuTurn, 1200);
-            return;
-          }
-          setMessage('Your turn!');
-        }, 1000);
+    // CPU has at least one legal move — proceed
+    game.cpuMoveHeuristic(); // ou cpuMoveRandom()
+    renderAll({ updateSticks: false });
+    setMessage('CPU played');
 
-      }, 1500); // tempo entre lançar e mover
+    // Pequeno delay antes de decidir se joga de novo
+    setTimeout(() => {
+      if (game.getCurrentPlayer().name === 'cpu') {
+        setMessage('CPU plays again!');
+        setTimeout(maybeCpuTurn, 1200);
+        return;
+      }
+      // Hand control back to the player *through* the flip queue.
+      renderSticks(null, { force: true, animate: false });
+      msgAfterFlip('Your turn!');
+      queueAfterFlip(updateRollBtn);
+    }, 800);
+    
 
-    }, 1200); // tempo antes de lançar os paus
+  }, 2500); // tempo entre lançar e mover
+
+
+    }, 2200); // tempo antes de lançar os paus
   }
 
 
@@ -810,7 +965,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const c = +cell.dataset.col;
 
       if (game.stickValue == null) {
-        setMessage('Roll first.');
+        setMessage('Roll first');
         return;
       }
 
@@ -827,7 +982,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Se a jogada mudou para CPU, iniciar jogada automaticamente
       if (game.getCurrentPlayer().name === 'cpu') {
         setMessage('CPU´s turn');
-        setTimeout(maybeCpuTurn, 1000);
+        setTimeout(maybeCpuTurn, 0);
     }
     });
   }
@@ -880,7 +1035,7 @@ document.addEventListener('DOMContentLoaded', () => {
   introStartBtn?.addEventListener('click', () => {
     showGame(); // Mostra a grelha do jogo
     openSidePanel(); // Força a abertura do painel
-    setMessage('Choose the configurations and click "Start" to play the game.');
+    setMessage('Choose the configurations and click "Start" to play the game');
   });
   
   // Side-panel Start (início real do jogo)
@@ -908,11 +1063,17 @@ document.addEventListener('DOMContentLoaded', () => {
       // Renderizar o tabuleiro
       renderAll();
       
+      // show inactive/grey sticks until the first roll
+      renderSticks(null);
+
+      show(rollBtn);
+      updateRollBtn();      
+
       // Fechar o painel
       closeSidePanel();
 
       // Enviar mensagem
-      setMessage('Game started! Player’s turn.');
+      setMessage('Game started! Player’s turn');
       // (Aqui podes adicionar lógica para verificar se é o CPU a começar)
     });
   }
@@ -920,24 +1081,54 @@ document.addEventListener('DOMContentLoaded', () => {
  // Close side panel button
   closePanelBtn?.addEventListener('click', closeSidePanel);
 
+  function passTurnToCpuWithPause() {
+    msgAfterFlip('No legal moves. Passing turn...');
+    setTimeout(() => {
+      renderSticks(null);        // idle sticks for a beat
+      setMessage('CPU’s turn');  // announce CPU turn
+      setTimeout(() => {
+        maybeCpuTurn();          // already has its own pre-roll pause
+      }, 2000);
+    }, 2500);
+  }
+  
   // Throw sticks
   if (rollBtn) {
     rollBtn.addEventListener('click', () => {
       if (!game) {
-        setMessage('Choose the configurations and click "Start" to play the game.');
+        setMessage('Choose the configurations and click "Start" to play the game');
         return;
       }
-      setMessage('Choose a piece and move it.');
-      setMessage('Choose a piece and move it.');
-      const val = game.startTurn();
-      renderSticks(val);
-      if (game.autoSkipIfNoMoves()) {
-        setMessage('No legal moves. Turn passed.');
-        maybeCpuTurn(); // CPU joga logo a seguir
+      if (!canPlayerRoll()) {
+        const turn = game.getCurrentPlayer()?.name;
+        if (turn === 'cpu') setMessage('Wait — CPU turn');
+        else if (sticksUI.busy) setMessage('Throwing sticks in progress…');
+        else setMessage('You already threw. Move a piece');
         return;
       }
-      renderAll();
+    
+      msgAfterFlip('Choose a piece and move it'); // show this after the faces are revealed
 
+      const val = game.startTurn();
+      updateRollBtn();
+      // start the flip animation:
+      renderSticks({ value: val, sticks: game.lastSticks }, { animate: true });
+      
+      if (game.autoSkipIfNoMoves()) {
+        updateRollBtn();
+        passTurnToCpuWithPause();
+        return;
+      }      
+      
+      // Rebuild the board without touching the sticks UI (so animation completes)
+      renderAll({ updateSticks: false });
+      
+      // After the flip reveals (~600ms), you can safely re-sync UI if you want
+      setTimeout(() => {
+        // optional: keep this if something else changed during the flip
+        renderAll({ updateSticks: false });
+      }, 650);
+      
     });
   }
 
@@ -947,8 +1138,9 @@ document.addEventListener('DOMContentLoaded', () => {
       window.game = null;
       if (boardEl) boardEl.innerHTML = '';
       if (sticksEl) sticksEl.innerHTML = '';
+      hide(rollBtn);
       showIntro();
-      setMessage('Game quit.');
+      setMessage('Game quit');
     });
   }
 
@@ -992,7 +1184,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Live board-size preview (optional)
   sizeInput?.addEventListener('change', () => {
     if (!game) {
-      setMessage('Choose the configurations and click "Start" to play the game.');
+      setMessage('Choose the configurations and click "Start" to play the game');
       // Reverte o valor se o jogo não tiver começado
       if (game) sizeInput.value = String(game.columns); 
       return;
@@ -1003,7 +1195,7 @@ document.addEventListener('DOMContentLoaded', () => {
     game = window.game;
     game.curPlayerIdx = firstIdx;
     renderAll();
-    setMessage('Board size changed.');
+    setMessage('Board size changed');
   });
 
 // User menu //
@@ -1049,6 +1241,5 @@ document.addEventListener('click', (e) => {
 
   // Initial UI state
   showIntro();
-  setMessage('Welcome to Tâb! Click Start to begin.');
+  setMessage('Welcome to Tâb! Click Start to begin');
 });
-

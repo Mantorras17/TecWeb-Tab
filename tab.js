@@ -275,10 +275,26 @@ class TabGame {
 
   autoSkipIfNoMoves() {
     if (this.stickValue != null && !this.hasAnyLegalMove()) {
-      this.endTurn(false);
-      return true;
+      const keepTurn = this.playAgain(); // e.g., rolled 4
+      
+      if (keepTurn) {
+        // O jogador rolou 1, 4, ou 6 mas não tem jogadas.
+        if (this.getCurrentPlayer().name !== 'cpu') {
+          setMessage('No possible moves. Roll again!');
+        }
+        // Não passa o turno, apenas reinicia os paus
+        this.endTurn(true); // keepTurn = true
+      } else {
+        // O jogador rolou 2 ou 3 e não tem jogadas.
+        if (this.getCurrentPlayer().name !== 'cpu') {
+          setMessage('No possible moves. Turn passed.');
+        }
+        // Passa o turno
+        this.endTurn(false); // keepTurn = false
+      }
+      return true; // Sim, saltámos a jogada.
     }
-    return false;
+    return false; // Não saltou, existem jogadas.
   }
 
   selectPieceAt(row, col) {
@@ -528,8 +544,8 @@ class TabGame {
   cpuMoveRandom() {
     const legalMoves = this.getAllLegalMoves();
     if (legalMoves.length === 0) {
-      this.endTurn(false);
-      return;
+      this.autoSkipIfNoMoves();
+      return false; // retorna false quando não consegue jogar
     }
 
     // Escolher movimento e destino aleatoriamente
@@ -540,13 +556,14 @@ class TabGame {
     this.selectedPiece = piece;
     this.selectedMoves = moves;
     this.moveSelectedTo(move.row, move.col);
+    return true; // conseguiu jogar
   }
 
   cpuMoveHeuristic() {
     const legalMoves = this.getAllLegalMoves();
     if (legalMoves.length === 0) {
-      this.endTurn(false);
-      return;
+      this.autoSkipIfNoMoves();
+      return false;
     }
 
     let bestScore = -Infinity;
@@ -580,18 +597,202 @@ class TabGame {
     this.selectedPiece = piece;
     this.selectedMoves = this.possibleMoves(piece, this.lastStickValue);
     this.moveSelectedTo(move.row, move.col);
+    return true;
   }
 
   cpuMove() {
-    const M = 2; // número total de níveis possíveis (0 e 1)
-    const N = this.difficultyLevel ?? 0; // nível atual
-    const A = Math.floor(Math.random() * M);
-
-    if (A < N) {
-      this.cpuMoveHeuristic(); // avançado
-    } else {
-      this.cpuMoveRandom(); // aleatório
+    // Nível 0: Fácil (Aleatório)
+    if (this.difficultyLevel === 0) {
+      return this.cpuMoveRandom();
     }
+    
+    // Nível 1: Médio (Heurística 1-ply)
+    if (this.difficultyLevel === 1) {
+      return this.cpuMoveHeuristic();
+    }
+
+    // Nível 2: Difícil (Expectiminimax N-ply)
+    if (this.difficultyLevel === 2) {
+      return this.cpuMoveMinimax();
+    }
+
+    // Fallback para o modo aleatório
+    return this.cpuMoveRandom();
+  }
+
+  /* Retorna uma pontuação: +infinito é vitória, -infinito é derrota.*/
+  evaluateBoard() {
+    const me = this.getCurrentPlayer();
+    const opponent = this.getOpponentPlayer();
+
+    // 1. Verificação de Fim de Jogo (Nó Terminal)
+    const gameOverState = this.isGameOver();
+    if (gameOverState.over) {
+      return (gameOverState.winner.name === me.name) ? Infinity : -Infinity;
+    }
+
+    let score = 0;
+    
+    // 2. Contagem de Peças (Heurística Principal)
+    // +100 por cada peça minha, -100 por cada peça do oponente.
+    score += me.pieces.length * 100;
+    score -= opponent.pieces.length * 100;
+
+    // 3. Bónus de Posição (Heurística Secundária)
+    for (const piece of me.pieces) {
+      // Bónus maior por estar na linha final segura
+      if (piece.state === 'last-row') score += 20; 
+      // Bónus menor por simplesmente ter saído da linha inicial
+      else if (piece.state !== 'not-moved') score += 5; 
+    }
+    for (const piece of opponent.pieces) {
+      // Penalização equivalente se o oponente estiver avançado
+      if (piece.state === 'last-row') score -= 20;
+      else if (piece.state !== 'not-moved') score -= 5;
+    }
+    return score;
+  }
+
+
+  /* (isMaximizingPlayer): 'true' se for o CPU (MAX), 'false' se for o Humano (MIN).*/
+  minimax(depth, isMaximizingPlayer) {
+    // Caso Base: "if node is a terminal node or depth = 0"
+    if (depth === 0 || this.isGameOver().over) {
+      return this.evaluateBoard(); // Retorna a pontuação do tabuleiro
+    }
+
+    // Define os 5 resultados possíveis dos paus e as suas probabilidades
+    //
+    const rolls = [
+      { value: 1, prob: 0.25 },  // Tâb
+      { value: 2, prob: 0.38 },  // Itneyn
+      { value: 3, prob: 0.25 },  // Teláteh
+      { value: 4, prob: 0.06 },  // Arba'ah
+      { value: 6, prob: 0.06 }   // Sitteh
+    ];
+
+    let expectedValue = 0; // "let α := 0" do nó "random event"
+
+    // Simula o NÓ DE SORTE: "foreach child of node" (para o evento aleatório)
+    // Itera sobre todos os lançamentos possíveis.
+    for (const roll of rolls) {
+      let bestScoreForThisRoll = isMaximizingPlayer ? -Infinity : +Infinity;
+      
+      // Encontra todas as jogadas legais para este lançamento simulado
+      const allMoves = [];
+      for (const piece of this.getCurrentPlayer().pieces) {
+        if (!piece.canMoveFirst(roll.value)) continue;
+        const dests = this.possibleMoves(piece, roll.value);
+        if (dests.length) allMoves.push({ piece, moves: dests });
+      }
+
+      if (allMoves.length === 0) {
+        // Se não houver jogadas, a pontuação é apenas a do tabuleiro atual
+        bestScoreForThisRoll = this.evaluateBoard();
+      } else {
+        // Simula o NÓ MAX/MIN: "foreach child of node" (para o jogador)
+        // Itera sobre todas as jogadas possíveis para este lançamento
+        for (const { piece, moves } of allMoves) {
+          for (const move of moves) {
+            
+            // 1. SIMULA A JOGADA 
+            const fromRow = piece.row, fromCol = piece.col, fromState = piece.state;
+            const occ = this.isCellOccupied(move.row, move.col);
+            let captured = null;
+            if (occ && occ.owner === 'opponent') {
+              captured = occ.piece;
+              this.getOpponentPlayer().removePiece(captured);
+            }
+            piece.moveTo(move.row, move.col);
+            //
+            const playsAgain = [1, 4, 6].includes(roll.value); 
+            
+            //  2. CHAMA A RECURSÃO 
+            // Chama `expectiminimax(child, depth-1)`
+            // Se 'playsAgain', o 'isMaximizingPlayer' não muda.
+            // Se não, o 'isMaximizingPlayer' é invertido (!isMaximizingPlayer).
+            const evaluation = this.minimax(depth - 1, playsAgain ? isMaximizingPlayer : !isMaximizingPlayer);
+
+            // 3. DESFAZ A JOGADA 
+            piece.row = fromRow; piece.col = fromCol; piece.state = fromState;
+            if (captured) this.getOpponentPlayer().addPiece(captured);
+            
+
+            if (isMaximizingPlayer) {
+              // Nó MAX: "α := max(α, ...)"
+              bestScoreForThisRoll = Math.max(bestScoreForThisRoll, evaluation);
+            } else {
+              // Nó MIN: "α := min(α, ...)"
+              bestScoreForThisRoll = Math.min(bestScoreForThisRoll, evaluation);
+            }
+          }
+        }
+      }
+      // "α := α + (Probability[child] × ...)"
+      expectedValue += bestScoreForThisRoll * roll.prob;
+    }
+    
+    // "return α"
+    return expectedValue; // Retorna a média ponderada de todas as possibilidades
+  }
+
+  /* Chamada depois do CPU ter lançado os sticks*/ 
+  cpuMoveMinimax() {
+    // O valor dos paus já está em this.lastStickValue
+    const legalMoves = this.getAllLegalMoves();
+    if (legalMoves.length === 0) {
+      return this.autoSkipIfNoMoves(); // Não há jogadas
+    }
+
+    let bestScore = -Infinity;
+    let bestMove = null;
+    // Profundidade da IA. 2 = (1 jogada CPU, 1 jogada Humano).
+    // Aumentar isto torna a IA mais lenta
+    const DEPTH = 2; 
+
+    for (const { piece, moves } of legalMoves) {
+      for (const move of moves) {
+        
+        // «SIMULA A JOGADA
+        const fromRow = piece.row, fromCol = piece.col, fromState = piece.state;
+        const occ = this.isCellOccupied(move.row, move.col);
+        let captured = null;
+        if (occ && occ.owner === 'opponent') {
+          captured = occ.piece;
+          this.getOpponentPlayer().removePiece(captured);
+        }
+        piece.moveTo(move.row, move.col);
+        const playAgain = this.playAgain();
+
+        // CHAMA O MINIMAX PARA VER O FUTURO 
+        // O próximo a jogar é:
+        // - O CPU (Maximizador) se 'playAgain' for true
+        // - O Humano (Minimizador) se 'playAgain' for false
+        let score = this.minimax(DEPTH, playAgain);
+
+        // DESFAZ A JOGADA 
+        piece.row = fromRow; piece.col = fromCol; piece.state = fromState;
+        if (captured) this.getOpponentPlayer().addPiece(captured);
+        
+
+        //  VERIFICA SE É A MELHOR JOGADA 
+        if (score > bestScore) {
+          bestScore = score;
+          bestMove = { piece, move };
+        }
+      }
+    }
+
+    //  EXECUTA A MELHOR JOGADA ENCONTRADA 
+    if (bestMove) {
+      this.selectedPiece = bestMove.piece;
+      this.selectedMoves = this.possibleMoves(bestMove.piece, this.lastStickValue);
+      this.moveSelectedTo(bestMove.move.row, bestMove.move.col);
+      return true; // Fez uma jogada
+    }
+    
+    // Fallback caso algo corra mal
+    return this.cpuMoveRandom();
   }
 
 }
@@ -610,15 +811,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // Single game instance (will be created on 'Start')
   let game;
   window.game = null; // Começa como nulo
+  let scores = {
+    player: { wins: 0, losses: 0 },
+    cpu: { wins: 0, losses: 0 }
+  };
 
   // Elements (guarded: only use if present)
   const intro = document.getElementById('intro-screen');
   const modeScreen = document.getElementById('mode-screen');
   const introStartBtn = document.getElementById('intro-start');
-  const modeSingleBtn = document.getElementById('mode-single');
-  const modeMultiBtn = document.getElementById('mode-multi');
-  const modeCpuBtn = document.getElementById('mode-cpu');
-  const modeBackBtn = document.getElementById('mode-back');
   const boardEl = document.getElementById('board');
   const rollBtn = document.getElementById('throw-sticks');
   const sticksEl = document.getElementById('sticks-result');
@@ -636,6 +837,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const mainGrid = document.getElementById('main-grid');
   const firstPlayerInput = document.getElementById('first-player');
   const difficultyInput = document.getElementById('difficulty');
+  const scoreboardBody = document.getElementById('scoreboard-body');
+  const noScoresMsg = document.getElementById('no-scores-msg');
 
   // Helpers
   function setMessage(text) {
@@ -653,7 +856,7 @@ document.addEventListener('DOMContentLoaded', () => {
     sidePanel.classList.add('open');
     sidePanel.style.width = '320px';
     menuBtn.innerHTML = '&times;';
-    setTimeout(() => sidePanel.focus(), 10);
+    setTimeout(() => sidePanel.focus(), 100);
   }
 
   function closeSidePanel() {
@@ -762,8 +965,31 @@ document.addEventListener('DOMContentLoaded', () => {
     buildBoard();
     updateBoardHighlights();
     renderSticks(game.stickValue ?? null);
-    // Roll button enabled only when no current roll
-    if (rollBtn) rollBtn.disabled = game.stickValue != null;
+
+    // Se o jogo não começou, não faz nada
+    if (!window.game) return; 
+
+    const isPlayerTurn = game.getCurrentPlayer().name === 'player';
+
+
+    // 1. Botão de Lançar
+    if (rollBtn) {
+      // Desativa se:
+      // - Não for a vez do jogador (é vez do CPU)
+      // - OU for a vez do jogador, mas ele JÁ lançou (tem de mover)
+      rollBtn.disabled = !isPlayerTurn || game.stickValue != null;
+    }
+
+    // 2. Tabuleiro
+    if (boardEl) {
+      if (isPlayerTurn) {
+        // Se é vez do jogador, o tabuleiro está ativo
+        boardEl.classList.remove('disabled-board');
+      } else {
+        // Se é vez do CPU, o tabuleiro é bloqueado
+        boardEl.classList.add('disabled-board');
+      }
+    }
   }
 
   // CPU turn handler 
@@ -780,23 +1006,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Outra pausa antes de mover
       setTimeout(() => {
-        game.cpuMoveHeuristic(); // ou cpuMoveRandom()
+        // 1. Captura o 'true' ou 'false' retornado pela cpuMove()
+        const didPlay = game.cpuMove();
+        
         renderAll();
-        setMessage('CPU played.');
+
+        // Se o jogo terminou, não faz mais nada
+        if (checkGameOver()) return;
+
+        // Só mostra a mensagem se a jogada foi feita
+        if (didPlay) {
+          setMessage('CPU played.');
+        } 
+        // Se 'didPlay' for 'false', não dizemos nada.
 
         // Pequeno delay antes de decidir se joga de novo
         setTimeout(() => {
-          if (game.playAgain()) {
+          if (game.getCurrentPlayer().name === 'cpu') {
             setMessage('CPU plays again!');
-            setTimeout(maybeCpuTurn, 1200);
+            setTimeout(maybeCpuTurn, 100);
             return;
           }
           setMessage('Your turn!');
-        }, 1000);
+        }, 100);
 
-      }, 1500); // tempo entre lançar e mover
+      }, 100); // tempo entre lançar e mover
 
-    }, 1200); // tempo antes de lançar os paus
+    }, 100); // tempo antes de lançar os paus
   }
 
 
@@ -823,15 +1059,20 @@ document.addEventListener('DOMContentLoaded', () => {
       game.selectOrMoveAt(r, c);
       renderAll();
 
+      // Se o jogo terminou, não faz mais nada
+      if (checkGameOver()) return;
+
       // Se a jogada mudou para CPU, iniciar jogada automaticamente
       if (game.getCurrentPlayer().name === 'cpu') {
         setMessage('CPU´s turn');
-        setTimeout(maybeCpuTurn, 1000);
+        setTimeout(maybeCpuTurn, 100);
     }
     });
   }
 
-    function showIntro() {
+
+
+  function showIntro() {
     if (intro) {
       intro.classList.remove('hidden');
       intro.hidden = false;
@@ -875,6 +1116,126 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  /* Atualiza o HTML da tabela do scoreboard com base na variável 'scores'.*/
+  function updateScoreboardView() {
+    if (!scoreboardBody || !noScoresMsg) return;
+
+    // Limpa a tabela
+    scoreboardBody.innerHTML = '';
+
+    const totalGames = scores.player.wins + scores.player.losses;
+
+    if (totalGames === 0) {
+      noScoresMsg.style.display = 'block'; // Mostra a mensagem "No games played"
+      return;
+    }
+
+    noScoresMsg.style.display = 'none'; // Esconde a mensagem
+
+    // Cria um array para ordenar por vitórias
+    const stats = [
+      { name: 'Player', ...scores.player },
+      { name: 'CPU', ...scores.cpu }
+    ];
+
+    // Ordena por mais vitórias
+    stats.sort((a, b) => b.wins - a.wins);
+
+    // Helper para calcular o rácio W/L
+    const getRatio = (wins, losses) => {
+      if (losses === 0) return wins > 0 ? 'INF' : '0.00'; // Evita divisão por zero
+      return (wins / losses).toFixed(2);
+    };
+
+    // Adiciona as linhas à tabela
+    stats.forEach((stat, index) => {
+      const row = scoreboardBody.insertRow();
+      row.innerHTML = `
+        <td>${index + 1}</td>
+        <td>${stat.name}</td>
+        <td>${stat.wins}</td>
+        <td>${stat.losses}</td>
+        <td>${getRatio(stat.wins, stat.losses)}</td>
+      `;
+    });
+  }
+
+  /* Chamado quando um jogo termina. Atualiza os scores e a UI. */
+  function handleGameOver(winner) {
+    if (!winner) return;
+
+    const winnerName = winner.name; // 'player' ou 'cpu'
+    const loserName = (winnerName === 'player') ? 'cpu' : 'player';
+
+    // 1. Atualiza a variável 'scores'
+    scores[winnerName].wins++;
+    scores[loserName].losses++;
+    
+    // 2. Atualiza a tabela HTML
+    updateScoreboardView();
+
+    // 3. Mostra a mensagem e bloqueia o jogo
+    setMessage(`Game Over! ${winnerName === 'player' ? 'You' : 'CPU'} won!`);
+    if (rollBtn) rollBtn.disabled = true;
+    if (boardEl) boardEl.classList.add('disabled-board');
+  }
+
+  /*  Verifica se o jogo terminou e, se sim, trata disso.
+   * Retorna 'true' se o jogo terminou, 'false' caso contrário. */
+  function checkGameOver() {
+    if (!game) return false;
+    
+    const { over, winner } = game.isGameOver();
+    
+    if (over) {
+      handleGameOver(winner);
+      return true;
+    }
+    return false;
+  }
+
+  // ( ... )
+  // Logo após a sua função checkGameOver()
+  // ( ... )
+
+  // Elementos do Modal
+  const modalOverlay = document.getElementById('modal-overlay');
+  const modalTitle = document.getElementById('modal-title');
+  const modalText = document.getElementById('modal-text');
+  const modalConfirm = document.getElementById('modal-confirm');
+  const modalCancel = document.getElementById('modal-cancel');
+
+  /* Mostra o modal de confirmação e espera por uma resposta.*/
+  function showModal(title, text, confirmText = 'Yes', cancelText = 'No') {
+    return new Promise((resolve) => {
+      // 1. Preenche o modal com o texto
+      modalTitle.textContent = title;
+      modalText.textContent = text;
+      modalConfirm.textContent = confirmText;
+      modalCancel.textContent = cancelText;
+
+      // 2. Mostra o modal
+      modalOverlay.classList.remove('hidden');
+      modalOverlay.style.display = 'grid';
+
+      // 3. Define os listeners dos botões (apenas uma vez)
+      
+      // Função para fechar e limpar
+      const close = (value) => {
+        modalOverlay.style.display = 'none';
+        modalOverlay.classList.add('hidden');
+        // Remove os listeners para não se acumularem
+        modalConfirm.onclick = null;
+        modalCancel.onclick = null;
+        resolve(value);
+      };
+
+      // 4. Atribui os cliques
+      modalConfirm.onclick = () => close(true);
+      modalCancel.onclick = () => close(false);
+    });
+  }
+
   // O botão "Intro Start" mostra o jogo e abre o painel
   introStartBtn?.addEventListener('click', () => {
     showGame(); // Mostra a grelha do jogo
@@ -884,7 +1245,27 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Side-panel Start (início real do jogo)
   if (startSideBtn) {
-    startSideBtn.addEventListener('click', () => {
+    startSideBtn.addEventListener('click', async () => {
+
+    // Verifica se um jogo já está a decorrer
+    if (window.game) {
+        // Usa o nosso modal personalizado
+        const confirmed = await showModal(
+          'New game?',
+          'Starting a new game will cancel the current one. Are you sure?',
+          'Yes, Start New',
+          'No, Cancel'
+        );
+        
+        // Se o utilizador clicar "Cancelar" (false), a função para aqui.
+        if (!confirmed) {
+          return;
+        }
+      }
+      // Se clicar "OK" (Yes), o código continua e 
+      // o jogo atual (window.game) será simplesmente substituído,
+      // sem ser pontuado.
+
       // Ler as configurações do painel
       const cols = sizeInput ? parseInt(sizeInput.value, 10) || 9 : 9;
       const firstPlayer = firstPlayerInput ? firstPlayerInput.value : 'player';
@@ -910,9 +1291,14 @@ document.addEventListener('DOMContentLoaded', () => {
       // Fechar o painel
       closeSidePanel();
 
-      // Enviar mensagem
-      setMessage('Game started! Player’s turn.');
-      // (Aqui podes adicionar lógica para verificar se é o CPU a começar)
+      if (game.getCurrentPlayer().name === 'cpu') {
+        setMessage('Game started! CPU plays first.');
+        // Damos um pequeno atraso para a animação do painel fechar
+        setTimeout(maybeCpuTurn, 100); 
+      } else {
+        setMessage('Game started! Your turn.');
+        // Não faz nada, espera pelo clique no "Throw Sticks"
+      }
     });
   }
 
@@ -923,28 +1309,85 @@ document.addEventListener('DOMContentLoaded', () => {
         setMessage('Choose the configurations and click "Start" to play the game.');
         return;
       }
-      setMessage('Choose a piece and move it.');
-      setMessage('Choose a piece and move it.');
+
       const val = game.startTurn();
       renderSticks(val);
-      if (game.autoSkipIfNoMoves()) {
-        setMessage('No legal moves. Turn passed.');
-        maybeCpuTurn(); // CPU joga logo a seguir
-        return;
-      }
-      renderAll();
 
+      // autoSkipIfNoMoves agora trata das mensagens e da lógica do turno
+      const skipped = game.autoSkipIfNoMoves();
+
+      if (skipped) {
+        // A lógica foi tratada. Verificamos se precisamos de chamar o CPU.
+        if (game.getCurrentPlayer().name === 'cpu') {
+          // Se o turno passou para o CPU (ex: rolou 3 sem jogadas)
+          maybeCpuTurn();
+        }
+        // Se ainda for a vez do jogador (ex: rolou 4 sem jogadas), 
+        // a mensagem é "Roll again!" e não fazemos mais nada.
+        return; 
+      }
+      
+      // Se não saltou, há jogadas disponíveis.
+      setMessage('Choose a piece to move.');
+      renderAll();
     });
   }
 
   // Quit
   if (quitBtn) {
-    quitBtn.addEventListener('click', () => {
+    quitBtn.addEventListener('click', async () => {
+      
+      let quitMessage = 'Game quit.';
+
+      const confirmed = await showModal(
+        'Quit?',
+        'Are you sure you want to quit? This action wil count as a loss.',
+        'Yes, quit',
+        'No, cancel'
+      );
+
+      // Se o utilizador clicar "Cancelar" (false), não faz nada.
+      if (!confirmed) {
+        return;
+      }
+
+      // Se um jogo estiver a decorrer quando se clica em "Quit"
+      if (window.game) {
+        
+        // Encontra o jogador CPU pelo nome
+        const cpuPlayer = game.players.find(p => p.name === 'cpu');
+
+        if (cpuPlayer) {
+          // Chama a função de fim de jogo, passando o CPU como vencedor
+          // Isto atualiza a variável 'scores' e o placar
+          handleGameOver(cpuPlayer);
+          
+          // Define uma mensagem específica de desistência
+          quitMessage = 'Game forfeited. CPU wins.';
+        }
+      }
+
+      // O código de reset original corre em qualquer dos casos
       window.game = null;
       if (boardEl) boardEl.innerHTML = '';
       if (sticksEl) sticksEl.innerHTML = '';
-      showIntro();
-      setMessage('Game quit.');
+
+      // Desativa os controlos de jogo, pois o jogo terminou
+      if (rollBtn) rollBtn.disabled = true;
+      
+      // Define a mensagem (ou a default ou a de desistência)
+      setMessage(quitMessage);
+
+      // Fecha o painel lateral (caso esteja aberto)
+      closeSidePanel();
+
+      // Após 3 segundos, volta à mensagem de "pronto a jogar".
+      setTimeout(() => {
+        // Apenas reverte a mensagem se outro jogo não tiver começado
+        if (!window.game) {
+          setMessage('Choose the configurations and click "Start" to play the game.');
+        }
+      }, 3000); // 3 segundos
     });
   }
 
@@ -975,7 +1418,7 @@ document.addEventListener('DOMContentLoaded', () => {
     scoreboardBtn.addEventListener('click', () => {
       const isOpen = scoreboardPanel.classList.toggle('open');
       scoreboardBtn.innerHTML = isOpen ? '&times;' : '🏆';
-      if (isOpen) setTimeout(() => scoreboardPanel.focus(), 10);
+      if (isOpen) setTimeout(() => scoreboardPanel.focus(), 100);
     });
     scoreboardPanel.addEventListener('click', (e) => {
       if (e.target === scoreboardPanel) {
@@ -985,66 +1428,64 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Live board-size preview (optional)
-  sizeInput?.addEventListener('change', () => {
-    if (!game) {
-      setMessage('Choose the configurations and click "Start" to play the game.');
-      // Reverte o valor se o jogo não tiver começado
-      if (game) sizeInput.value = String(game.columns); 
-      return;
+  /*Função chamada sempre que uma configuração é alterada no painel.*/
+  function settingChangeListener() {
+    if (window.game) {
+      setMessage('Setting changed. Click "Start" to begin a new game with this setting.');
     }
-    const cols = parseInt(sizeInput.value, 10) || 9;
-    const firstIdx = game.curPlayerIdx;
-    window.game = new TabGame(cols);
-    game = window.game;
-    game.curPlayerIdx = firstIdx;
-    renderAll();
-    setMessage('Board size changed.');
-  });
-
-// User menu //
-const userAvatar = document.getElementById('user-avatar');
-const userMenu = document.getElementById('user-menu');
-const menuMain = document.getElementById('menu-main');
-const menuLogin = document.getElementById('menu-login');
-const menuSignup = document.getElementById('menu-signup');
-
-// Toggle open/close on avatar click
-if (userAvatar && userMenu) {
-  userAvatar.addEventListener('click', () => {
-    userMenu.classList.toggle('hidden');
-  });
-}
-
-// Login / Signup buttons (main menu)
-document.getElementById('btn-login')?.addEventListener('click', () => {
-  menuMain.classList.add('hidden');
-  menuLogin.classList.remove('hidden');
-});
-document.getElementById('btn-signup')?.addEventListener('click', () => {
-  menuMain.classList.add('hidden');
-  menuSignup.classList.remove('hidden');
-});
-
-// Back buttons
-menuLogin.querySelector('.back-btn')?.addEventListener('click', () => {
-  menuLogin.classList.add('hidden');
-  menuMain.classList.remove('hidden');
-});
-menuSignup.querySelector('.back-btn')?.addEventListener('click', () => {
-  menuSignup.classList.add('hidden');
-  menuMain.classList.remove('hidden');
-});
-
-// Optional: close the user menu when clicking outside
-document.addEventListener('click', (e) => {
-  if (!userMenu.contains(e.target) && !userAvatar.contains(e.target)) {
-    userMenu.classList.add('hidden');
   }
-});
 
-  // Initial UI state
-  showIntro();
-  setMessage('Welcome to Tâb! Click Start to begin.');
-});
+  // Substitui o seu listener 'sizeInput' antigo por estes
+  sizeInput?.addEventListener('change', settingChangeListener);
+  firstPlayerInput?.addEventListener('change', settingChangeListener);
+  difficultyInput?.addEventListener('change', settingChangeListener);
+
+  // User menu //
+  const userAvatar = document.getElementById('user-avatar');
+  const userMenu = document.getElementById('user-menu');
+  const menuMain = document.getElementById('menu-main');
+  const menuLogin = document.getElementById('menu-login');
+  const menuSignup = document.getElementById('menu-signup');
+
+  // Toggle open/close on avatar click
+  if (userAvatar && userMenu) {
+    userAvatar.addEventListener('click', () => {
+      userMenu.classList.toggle('hidden');
+    });
+  }
+
+  // Login / Signup buttons (main menu)
+  document.getElementById('btn-login')?.addEventListener('click', () => {
+    menuMain.classList.add('hidden');
+    menuLogin.classList.remove('hidden');
+  });
+  document.getElementById('btn-signup')?.addEventListener('click', () => {
+    menuMain.classList.add('hidden');
+    menuSignup.classList.remove('hidden');
+  });
+
+  // Back buttons
+  menuLogin.querySelector('.back-btn')?.addEventListener('click', () => {
+    menuLogin.classList.add('hidden');
+    menuMain.classList.remove('hidden');
+  });
+  menuSignup.querySelector('.back-btn')?.addEventListener('click', () => {
+    menuSignup.classList.add('hidden');
+    menuMain.classList.remove('hidden');
+  });
+
+  // Optional: close the user menu when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!userMenu.contains(e.target) && !userAvatar.contains(e.target)) {
+      userMenu.classList.add('hidden');
+    }
+  });
+
+    // Mostra o placar no estado inicial (vazio)
+    updateScoreboardView();
+
+    // Initial UI state
+    showIntro();
+    setMessage('Welcome to Tâb! Click Start to begin.');
+  });
 

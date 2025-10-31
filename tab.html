@@ -155,7 +155,17 @@
     <!-- Botão fixo para abrir o scoreboard -->
     <button id="scoreboard-btn" aria-label="Open scoreboard">🏆</button>
     </div>
+    <div id="modal-overlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-box">
+            <h3 id="modal-title">Confirmar Ação</h3>
+            <p id="modal-text">Tem a certeza?</p>
+            <div id="modal-buttons">
+                <button id="modal-cancel" class="modal-btn">Cancelar</button>
+                <button id="modal-confirm" class="modal-btn confirm">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
     <script src="tab.js"></script>
 </body>
-
 </html>

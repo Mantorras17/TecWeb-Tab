@@ -6,7 +6,7 @@
     height: 100%;
     margin: 0;
     padding: 0;
-    overflow: hidden; /* 🚫 disable scrollbars */
+    overflow: hidden; /* disable scrollbars */
   }
   
   button, input, select {
@@ -1272,3 +1272,88 @@ background: rgba(255,229,213,0.6);   /* subtle amber hover */
   pointer-events: none;
 }
 
+#board.disabled-board {
+  pointer-events: none; /* quando não é a jogado do player este não consegue selecionar peças no board */ 
+}
+
+/* Estilos do Modal de Confirmação */
+
+#modal-overlay {
+  position: fixed;
+  inset: 0; /* (top: 0, left: 0, right: 0, bottom: 0) */
+  background: rgba(0, 0, 0, 0.6); /* Fundo escuro */
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  display: grid;
+  place-items: center;
+  z-index: 2000; /* Tem de estar acima de tudo */
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+#modal-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+  /* (Também podemos usar display: none, que será gerido por JS) */
+}
+
+.modal-box {
+  background: #fdfaf5; /* Cor de pergaminho, combina com o tema */
+  border-radius: 12px;
+  padding: 24px 30px;
+  width: min(450px, 90vw);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  border: 1px solid #ffffffa1;
+  text-align: center;
+  color: #3b2b22;
+}
+
+#modal-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+#modal-text {
+  font-size: 1rem;
+  line-height: 1.5;
+  margin-bottom: 25px;
+}
+
+#modal-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+/* Estilo dos botões do modal (baseado no intro-start-btn) */
+.modal-btn {
+  font-size: 1rem;
+  padding: 10px 20px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+  font-weight: 600;
+}
+
+/* Botão de Cancelar (Secundário) */
+.modal-btn {
+  background: #aaa;
+  color: #fff;
+}
+.modal-btn:hover {
+  background: #999;
+  transform: translateY(-1px);
+}
+
+/* Botão de Confirmar (Primário) */
+.modal-btn.confirm {
+  background: #4c3629; /* Cor principal do tema */
+  color: #fff;
+}
+.modal-btn.confirm:hover {
+  background: #3a2a1f;
+  transform: translateY(-1px);
+}

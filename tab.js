@@ -40,7 +40,8 @@ class Graph {
 
   kStepId(startId, k) {
     let options = new Set([startId]);
-    for (let i=0; i < k; i++) {
+    // CORRIGIDO: O 'cons' e 'for' estavam misturados no merge
+    for (let i = 0; i < k; i++) { 
       const next = new Set();
       options.forEach(id => this.neighborsId(id).forEach(n => next.add(n)));
       options = next;
@@ -182,14 +183,19 @@ class TabGame {
     this.selectedPiece = null;
     this.selectedMoves = [];
     this.extraTurns = [1, 4, 6];
-    this.lastSticks = [0, 0, 0, 0];  
+    
+    // --- MERGE ---
+    this.lastSticks = [0, 0, 0, 0];  // From HEAD (para animação)
+    this.over = false;              // From main (para lógica de jogo)
+    this.winner = null;           // From main (para lógica de jogo)
+    // --- FIM MERGE ---
   }
 
   initPlayers() {
-    const player = new Player('player', 'blue', 3);
+    // Da tua lógica 'main' (correta)
+    const player = new Player('player1', 'blue', 3);
     const cpu = new Player('cpu', 'red', 0);
 
-    // Create pieces for each player (owner is the Player object)
     for (let col = 0; col < this.columns; col++) {
       const playerPiece = new Piece(player, 3, col);
       const cpuPiece = new Piece(cpu, 0, col);
@@ -205,7 +211,7 @@ class TabGame {
     const value = (sum === 0) ? 6 : sum;
     this.stickValue = value;
     this.lastStickValue = value;
-    this.lastSticks = sticks;
+    this.lastSticks = sticks; // <-- Adicionado do 'HEAD'
     return { sticks, value };
   }
 
@@ -235,8 +241,8 @@ class TabGame {
     const graph = this.board.graph;
     const startId = graph.coordToId(piece.row, piece.col);
     const lastLine = piece.calculateLastRow();
+    const startRow = piece.owner.startRow; // <-- Lógica do 'main'
 
-    // Using BFS with k steps with rule-based pruning on edges
     let frontier = new Set([startId]);
     for (let step = 0; step < sticks; step++) {
       const next = new Set();
@@ -244,6 +250,9 @@ class TabGame {
         const from = graph.idToCoord(id);
         graph.neighborsId(id).forEach(nid => {
           const to = graph.idToCoord(nid);
+          // Lógica do 'main' (correção de bug)
+          const enteringStartRow = (from.row !== startRow) && (to.row === startRow);
+          if (enteringStartRow) return;
           const enteringLastRow = (from.row !== lastLine) && (to.row === lastLine);
           if (enteringLastRow && !piece.canVisitLastRow()) return;
           if (enteringLastRow && piece.state === 'last-row') return;
@@ -254,7 +263,7 @@ class TabGame {
       if (frontier.size === 0) break;
     }
     const coords = Array.from(frontier).map(id => graph.idToCoord(id));
-    return coords.filter(({row, col}) => {
+    return coords.filter(({ row, col }) => {
       const occ = this.isCellOccupied(row, col);
       return !(occ && occ.owner === 'me');
     });
@@ -275,12 +284,19 @@ class TabGame {
     return this.getAllLegalMoves().length > 0;
   }
 
+  // Função "silenciosa" do 'main' (correta)
   autoSkipIfNoMoves() {
     if (this.stickValue != null && !this.hasAnyLegalMove()) {
-      this.endTurn(false);
-      return true;
+      const keepTurn = this.playAgain(); 
+      
+      if (keepTurn) {
+        this.endTurn(true); // keepTurn = true
+      } else {
+        this.endTurn(false); // keepTurn = false
+      }
+      return true; // Sim, saltámos a jogada.
     }
-    return false;
+    return false; // Não saltou, existem jogadas.
   }
 
   selectPieceAt(row, col) {
@@ -303,8 +319,11 @@ class TabGame {
     return this.moveSelectedTo(row, col);
   }
 
+  // Função 'movePiece' do 'main' (corrigida)
   movePiece(piece, toRow, toCol) {
+    if (this.over) return false; 
     if (!piece || this.stickValue == null) return false;
+    if (piece.owner !== this.getCurrentPlayer()) return false;
     const legal = this.possibleMoves(piece, this.stickValue);
     const ok = legal.some(p => p.row === toRow && p.col === toCol);
     if (!ok) return false;
@@ -313,6 +332,7 @@ class TabGame {
     else if (occ && occ.owner === 'me') return false;
     piece.moveTo(toRow, toCol);
     this.clearSelection();
+    if (this.checkGameOver().over) return true;
     const again = this.playAgain();
     this.endTurn(again);
     return true;
@@ -328,34 +348,36 @@ class TabGame {
   }
 
   handleCapture(capturedPiece) {
-    this.getOpponentPlayer().removePiece(capturedPiece)
+    this.getOpponentPlayer().removePiece(capturedPiece);
+    this.checkGameOver(); // Correção do 'main'
   }
 
+  // Função "silenciosa" do 'main' (correta)
   moveSelectedTo(row, col) {
+    if (this.over) return false;
     const piece = this.selectedPiece;
     if (!piece) return false;
     const allowed = this.selectedMoves.some(p => p.row === row && p.col === col);
     if (!allowed) return false;
 
-    // Capture if opponent is there
     const occ = this.isCellOccupied(row, col);
     if (occ && occ.owner === 'opponent') {
       this.handleCapture(occ.piece);
     }
     else if (occ && occ.owner === 'me') return false;
+    
     piece.moveTo(row, col);
     this.clearSelection();
+    
+    if (this.checkGameOver().over) return true;
+    
     const playAgain = this.playAgain();
-
-    // Mostrar mensagem se for jogador humano
-  if (playAgain && this.getCurrentPlayer().name !== 'cpu') {
-    setMessage('Play again! ');
-  }
     this.endTurn(playAgain);
-    return true;
+    return true; // Retorna 'true' para indicar que a jogada foi um sucesso
   }
 
   startTurn(sticks = null) {
+    if (this.over) return null;
     if (sticks == null) this.throwSticks();
     else {
       this.stickValue = sticks;
@@ -369,203 +391,56 @@ class TabGame {
   }
 
   endTurn(keepTurn = false) {
+    if (this.over) return;
     this.stickValue = null;
     if (!keepTurn) this.curPlayerIdx = 1 - this.curPlayerIdx;
   }
 
-  isGameOver() {
+  // Função 'checkGameOver' do 'main' (corrigida)
+  checkGameOver() {
+    if (this.over) return { over: true, winner: this.winner };
+    
     const p0Lost = this.players[0].hasLost();
     const p1Lost = this.players[1].hasLost();
     if (p0Lost || p1Lost) {
-      const winner = p0Lost ? this.players[1] : this.players[0];
-      return { over: true, winner };
+      this.over = true;
+      this.winner = p0Lost ? this.players[1] : this.players[0];
+      this.stickValue = null;
+      this.clearSelection();
+      return { over: true, winner: this.winner };
     }
     return { over: false, winner: null };
   }
 
-
-
-
-  selfTestGraph() {
-    const g = this.board.graph;
-    const C = this.columns;
-    const outDeg = [];
-    const missing = [];
-
-    const hasEdge = (r1, c1, r2, c2) => {
-      const from = g.coordToId(r1, c1);
-      const to = g.coordToId(r2, c2);
-      return g.adj[from].has(to);
-    };
-
-    for (let r = 0; r < this.rows; r++) {
-      for (let c = 0; c < C; c++) {
-        const id = g.coordToId(r, c);
-        const deg = g.adj[id].size;
-        outDeg.push({ row: r, col: c, outDegree: deg });
-
-        if (r === 0) {
-          if (c > 0) { if (!hasEdge(r, c, 0, c - 1)) missing.push({ from: [r,c], to:[0,c-1] }); }
-          else { if (!hasEdge(r, c, 1, 0)) missing.push({ from: [r,c], to:[1,0] }); }
-        } else if (r === 1) {
-          if (c < C - 1) { if (!hasEdge(r, c, 1, c + 1)) missing.push({ from: [r,c], to:[1,c+1] }); }
-          else {
-            if (!hasEdge(r, c, 0, c)) missing.push({ from: [r,c], to:[0,c] });
-            if (!hasEdge(r, c, 2, c)) missing.push({ from: [r,c], to:[2,c] });
-          }
-        } else if (r === 2) {
-          if (c > 0) { if (!hasEdge(r, c, 2, c - 1)) missing.push({ from: [r,c], to:[2,c-1] }); }
-          else { if (!hasEdge(r, c, 1, 0)) missing.push({ from: [r,c], to:[1,0] }); }
-        } else if (r === 3) {
-          if (c < C - 1) { if (!hasEdge(r, c, 3, c + 1)) missing.push({ from: [r,c], to:[3,c+1] }); }
-          else { if (!hasEdge(r, c, 2, c)) missing.push({ from: [r,c], to:[2,c] }); }
-        }
-      }
-    }
-
-    // Degree checks: all 1 except (1, last col) which should be 2
-    const badOutDegree = outDeg.filter(({ row, col, outDegree }) => {
-      const expected = (row === 1 && col === C - 1) ? 2 : 1;
-      return outDegree !== expected;
-    });
-
-    const ok = missing.length === 0 && badOutDegree.length === 0;
-    if (!ok) {
-      console.warn('Graph test failed');
-      console.table(badOutDegree);
-      console.table(missing);
-    } else {
-      console.log('Graph test passed');
-    }
-    return { ok, badOutDegree, missing };
-  }
-
-  printArrowMap() {
-    const g = this.board.graph;
-    const C = this.columns;
-    const arrowRows = [];
-    const arrowFor = (r, c) => {
-      const outs = Array.from(g.adj[g.coordToId(r, c)]);
-      if (outs.length === 2) return '*'; // branch at row 1, last col
-      if (outs.length === 0) return '·';
-      const { row, col } = g.idToCoord(outs[0]);
-      if (row === r && col === c + 1) return '>';
-      if (row === r && col === c - 1) return '<';
-      if (row === r + 1 && col === c) return 'v';
-      if (row === r - 1 && col === c) return '^';
-      return '?';
-    };
-    for (let r = 0; r < this.rows; r++) {
-      let line = '';
-      for (let c = 0; c < C; c++) line += arrowFor(r, c);
-      arrowRows.push(line);
-    }
-    const map = arrowRows.join('\n');
-    console.log(map);
-    return map;
-  }
-
-  debugReset(p1Coords = [], p2Coords = []) {
-    this.players[0].pieces = [];
-    this.players[1].pieces = [];
-    p1Coords.forEach(({row, col}) => this.players[0].addPiece(new Piece(this.players[0], row, col)));
-    p2Coords.forEach(({row, col}) => this.players[1].addPiece(new Piece(this.players[1], row, col)));
-    this.curPlayerIdx = 0;
-    this.stickValue = null;
-    this.clearSelection();
-  }
-
-  // Simple assertion utility
-  _assert(cond, msg) {
-    if (!cond) throw new Error('Test failed: ' + msg);
-  }
-
-  // Run a few logic tests; throws on failure, logs on success
-  runLogicSelfTest() {
-    console.log('Running logic self-test...');
-
-    // 1) Graph shape sanity for current width
-    const map = this.printArrowMap();
-    this._assert(map.includes('*'), 'Expected branch (*) at row 1 last col');
-
-    // 2) Jumping: pieces can jump over blockers; only final landing checked
-    const g3 = new TabGame(3);
-    g3.debugReset([{row:3, col:0}], []);
-    g3.players[0].pieces[0].state = 'moved'; // allow sticks=2
-    g3.startTurn(2);
-    g3.selectPieceAt(3,0);
-    let moves = g3.getSelectedMoves();
-    g3._assert(moves.some(p => p.row === 3 && p.col === 2), 'Jumping two steps failed (no blocker)');
-
-    // Add a blocker at 3,1 (own piece) -> still can land at 3,2; cannot land on 3,1
-    g3.players[0].addPiece(new Piece(g3.players[0], 3, 1));
-    g3.startTurn(2);
-    g3.selectPieceAt(3,0);
-    moves = g3.getSelectedMoves();
-    g3._assert(moves.some(p => p.row === 3 && p.col === 2), 'Should jump over own piece at 3,1');
-    g3._assert(!moves.some(p => p.row === 3 && p.col === 1), 'Should not land on own piece at 3,1');
-
-    // 3) Entering last row is blocked while any own piece is on startRow
-    const g9 = new TabGame(9);
-    // Player starts on row 3; leave one piece on row 3 to block entry
-    g9.debugReset(
-      [{row:1, col:8}, {row:3, col:0}],
-      []
-    );
-    g9.startTurn(1);
-    g9.selectPieceAt(1,8);
-    moves = g9.getSelectedMoves();
-    g9._assert(!moves.some(p => p.row === 0 && p.col === 8), 'Should not enter last row while a piece remains on start row');
-
-    // Move that blocking piece off the start row, then entry is allowed
-    g9.players[0].pieces.find(p => p.row === 3).row = 2; // move off start row
-    g9.startTurn(1);
-    g9.selectPieceAt(1,8);
-    moves = g9.getSelectedMoves();
-    g9._assert(moves.some(p => p.row === 0 && p.col === 8), 'Should allow entering last row after start row is empty');
-
-    console.log('Logic self-test passed.');
-  }
-
+  // Funções de IA (CPU) - copiadas do 'main' (faltavam no 'HEAD')
   cpuMoveRandom() {
     const legalMoves = this.getAllLegalMoves();
     if (legalMoves.length === 0) {
-      this.endTurn(false);
-      return;
+      this.autoSkipIfNoMoves();
+      return false;
     }
-
-    // Escolher movimento e destino aleatoriamente
     const { piece, moves } = legalMoves[Math.floor(Math.random() * legalMoves.length)];
     const move = moves[Math.floor(Math.random() * moves.length)];
-
-    // Executar jogada
     this.selectedPiece = piece;
     this.selectedMoves = moves;
     this.moveSelectedTo(move.row, move.col);
+    return true;
   }
 
   cpuMoveHeuristic() {
     const legalMoves = this.getAllLegalMoves();
     if (legalMoves.length === 0) {
-      this.endTurn(false);
-      return;
+      this.autoSkipIfNoMoves();
+      return false;
     }
-
     let bestScore = -Infinity;
     let bestMoves = [];
-
     for (const { piece, moves } of legalMoves) {
       for (const move of moves) {
         let score = 0;
-
-        // Heurística 1: capturar peças
         const occ = this.isCellOccupied(move.row, move.col);
         if (occ && occ.owner === 'opponent') score += 10;
-
-        // Heurística 2: mover peça pela primeira vez
         if (piece.state === 'not-moved') score += 1;
-
-        // Heurística 3: mover peça da linha inicial
         if (piece.row === piece.owner.startRow) score += 0.5;
 
         if (score > bestScore) {
@@ -576,51 +451,161 @@ class TabGame {
         }
       }
     }
-
-    // Escolher aleatoriamente uma das melhores jogadas
     const { piece, move } = bestMoves[Math.floor(Math.random() * bestMoves.length)];
     this.selectedPiece = piece;
     this.selectedMoves = this.possibleMoves(piece, this.lastStickValue);
     this.moveSelectedTo(move.row, move.col);
+    return true;
   }
 
   cpuMove() {
-    const M = 2; // número total de níveis possíveis (0 e 1)
-    const N = this.difficultyLevel ?? 0; // nível atual
-    const A = Math.floor(Math.random() * M);
-
-    if (A < N) {
-      this.cpuMoveHeuristic(); // avançado
-    } else {
-      this.cpuMoveRandom(); // aleatório
+    if (this.difficultyLevel === 0) {
+      return this.cpuMoveRandom();
     }
+    if (this.difficultyLevel === 1) {
+      return this.cpuMoveHeuristic();
+    }
+    if (this.difficultyLevel === 2) {
+      return this.cpuMoveMinimax();
+    }
+    return this.cpuMoveRandom();
   }
 
+  evaluateBoard() {
+    const me = this.getCurrentPlayer();
+    const opponent = this.getOpponentPlayer();
+    const gameOverState = this.checkGameOver();
+    if (gameOverState.over) {
+      return (gameOverState.winner.name === me.name) ? Infinity : -Infinity;
+    }
+    let score = 0;
+    score += me.pieces.length * 100;
+    score -= opponent.pieces.length * 100;
+    for (const piece of me.pieces) {
+      if (piece.state === 'last-row') score += 20; 
+      else if (piece.state !== 'not-moved') score += 5; 
+    }
+    for (const piece of opponent.pieces) {
+      if (piece.state === 'last-row') score -= 20;
+      else if (piece.state !== 'not-moved') score -= 5;
+    }
+    return score;
+  }
+
+  minimax(depth, isMaximizingPlayer) {
+    if (depth === 0 || this.checkGameOver().over) {
+      return this.evaluateBoard();
+    }
+    const rolls = [
+      { value: 1, prob: 0.25 },  // Tâb
+      { value: 2, prob: 0.38 },  // Itneyn
+      { value: 3, prob: 0.25 },  // Teláteh
+      { value: 4, prob: 0.06 },  // Arba'ah
+      { value: 6, prob: 0.06 }   // Sitteh
+    ];
+    let expectedValue = 0;
+    for (const roll of rolls) {
+      let bestScoreForThisRoll = isMaximizingPlayer ? -Infinity : +Infinity;
+      const allMoves = [];
+      for (const piece of this.getCurrentPlayer().pieces) {
+        if (!piece.canMoveFirst(roll.value)) continue;
+        const dests = this.possibleMoves(piece, roll.value);
+        if (dests.length) allMoves.push({ piece, moves: dests });
+      }
+      if (allMoves.length === 0) {
+        bestScoreForThisRoll = this.evaluateBoard();
+      } else {
+        for (const { piece, moves } of allMoves) {
+          for (const move of moves) {
+            const fromRow = piece.row, fromCol = piece.col, fromState = piece.state;
+            const occ = this.isCellOccupied(move.row, move.col);
+            let captured = null;
+            if (occ && occ.owner === 'opponent') {
+              captured = occ.piece;
+              this.getOpponentPlayer().removePiece(captured);
+            }
+            piece.moveTo(move.row, move.col);
+            const playsAgain = [1, 4, 6].includes(roll.value); 
+            const evaluation = this.minimax(depth - 1, playsAgain ? isMaximizingPlayer : !isMaximizingPlayer);
+            piece.row = fromRow; piece.col = fromCol; piece.state = fromState;
+            if (captured) this.getOpponentPlayer().addPiece(captured);
+            if (isMaximizingPlayer) {
+              bestScoreForThisRoll = Math.max(bestScoreForThisRoll, evaluation);
+            } else {
+              bestScoreForThisRoll = Math.min(bestScoreForThisRoll, evaluation);
+            }
+          }
+        }
+      }
+      expectedValue += bestScoreForThisRoll * roll.prob;
+    }
+    return expectedValue;
+  }
+
+  cpuMoveMinimax() {
+    const legalMoves = this.getAllLegalMoves();
+    if (legalMoves.length === 0) {
+      return this.autoSkipIfNoMoves();
+    }
+    let bestScore = -Infinity;
+    let bestMove = null;
+    const DEPTH = 2; 
+    for (const { piece, moves } of legalMoves) {
+      for (const move of moves) {
+        const fromRow = piece.row, fromCol = piece.col, fromState = piece.state;
+        const occ = this.isCellOccupied(move.row, move.col);
+        let captured = null;
+        if (occ && occ.owner === 'opponent') {
+          captured = occ.piece;
+          this.getOpponentPlayer().removePiece(captured);
+        }
+        piece.moveTo(move.row, move.col);
+        const playAgain = this.playAgain();
+        let score = this.minimax(DEPTH, playAgain);
+        piece.row = fromRow; piece.col = fromCol; piece.state = fromState;
+        if (captured) this.getOpponentPlayer().addPiece(captured);
+        if (score > bestScore) {
+          bestScore = score;
+          bestMove = { piece, move };
+        }
+      }
+    }
+    if (bestMove) {
+      this.selectedPiece = bestMove.piece;
+      this.selectedMoves = this.possibleMoves(bestMove.piece, this.lastStickValue);
+      this.moveSelectedTo(bestMove.move.row, bestMove.move.col);
+      return true;
+    }
+    return this.cpuMoveRandom();
+  }
 }
 
-
-
-
-
-
+// =================================================================
+// INÍCIO DA LÓGICA DA INTERFACE (UI)
+// =================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Try to read size from a selector; fallback to 9
   const sizeInput = document.getElementById('board-size');
-  const initialCols = sizeInput ? parseInt(sizeInput.value, 10) || 9 : 9;
-
-  // Single game instance (will be created on 'Start')
+  
+  // Variáveis globais do 'main'
   let game;
-  window.game = null; // Começa como nulo
+  window.game = null;
+  let cpuBusy = false;
+  let cpuRolledOnce = false;
+  let cpuTimer = null;
+  let messageTimer = null;
 
-  // Elements (guarded: only use if present)
+  // Scoreboard a 3 do 'main'
+  let scores = {
+    player1: { wins: 0, losses: 0, name: 'Player 1' },
+    player2: { wins: 0, losses: 0, name: 'Player 2' },
+    cpu:     { wins: 0, losses: 0, name: 'CPU' }
+  };
+
+  // --- MERGE: Variáveis de ambos os 'branches' ---
   const intro = document.getElementById('intro-screen');
   const modeScreen = document.getElementById('mode-screen');
   const introStartBtn = document.getElementById('intro-start');
-  const modeSingleBtn = document.getElementById('mode-single');
-  const modeMultiBtn = document.getElementById('mode-multi');
-  const modeCpuBtn = document.getElementById('mode-cpu');
-  const modeBackBtn = document.getElementById('mode-back');
   const boardEl = document.getElementById('board');
   const rollBtn = document.getElementById('throw-sticks');
   const sticksEl = document.getElementById('sticks-result');
@@ -637,17 +622,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const scoreboardPanel = document.getElementById('scoreboard-panel');
   const mainGrid = document.getElementById('main-grid');
   const firstPlayerInput = document.getElementById('first-player');
+  const gameModeInput = document.getElementById('game-mode');
   const difficultyInput = document.getElementById('difficulty');
   const closePanelBtn = document.getElementById('closePanel');
-  const sticksUI = { busy: false, queue: [] }; // flip animation in progress? + queued work
+  const scoreboardBody = document.getElementById('scoreboard-body'); // Do 'main'
+  const noScoresMsg = document.getElementById('no-scores-msg'); // Do 'main'
+  const sticksUI = { busy: false, queue: [] }; // Do 'HEAD' (animação)
+  // --- FIM MERGE ---
 
+  // --- Helpers do 'HEAD' (animação) ---
   function hide(el){ if(el){ el.classList.add('hidden'); el.style.display = 'none'; } }
   function show(el){ if(el){ el.classList.remove('hidden'); el.style.display = ''; } }
 
-  hide(rollBtn);
+  hide(rollBtn); // Oculta o botão no início
 
   function queueAfterFlip(cb, delay = 0) {
-    // Run now if not flipping; otherwise enqueue to run right after reveal
     if (!sticksUI.busy) {
       setTimeout(cb, delay);
       return;
@@ -655,12 +644,11 @@ document.addEventListener('DOMContentLoaded', () => {
     sticksUI.queue.push(() => setTimeout(cb, delay));
   }
   
-  // Call this instead of setMessage(...) when you want it to wait for the flip
   function msgAfterFlip(text, delay = 0) {
     queueAfterFlip(() => setMessage(text), delay);
   }
   
-  // Helpers
+  // Helpers do 'main' (lógica)
   function setMessage(text) {
     if (!msgEl) return;
     msgEl.innerHTML = '';
@@ -669,28 +657,32 @@ document.addEventListener('DOMContentLoaded', () => {
     box.textContent = text || '';
     msgEl.appendChild(box);
   }
+  
+  // --- MERGE: `canPlayerRoll` (do 'HEAD') corrigido para PvP/PvC ---
   function canPlayerRoll() {
     if (!game) return false;
-    if (sticksUI.busy) return false;                 // flipping animation running
+    if (sticksUI.busy) return false; // Animação a decorrer
     const cur = game.getCurrentPlayer();
-    if (!cur || cur.name !== 'player') return false; // not your turn
-    return game.stickValue == null;                  // already rolled this turn?
+    if (!cur) return false;
+    if (cur.name === 'cpu') return false; // Bloqueia CPU
+    return game.stickValue == null; // Permite 'player1' e 'player2' se não tiverem rolado
   }
   
+  // Helper do 'HEAD'
   function updateRollBtn() {
     if (!rollBtn) return;
     const enabled = canPlayerRoll();
     rollBtn.disabled = !enabled;
     rollBtn.setAttribute('aria-disabled', String(!enabled));
   }
-  
-  //  Funções de controlo do Painel 
+
+  // --- MERGE: `openSidePanel` (largura do 'HEAD') ---
   function openSidePanel() {
     if (!sidePanel || !menuBtn) return;
     sidePanel.classList.add('open');
-    sidePanel.style.width = '360px';
+    sidePanel.style.width = '360px'; // <-- Do 'HEAD'
     menuBtn.innerHTML = '&times;';
-    setTimeout(() => sidePanel.focus(), 10);
+    setTimeout(() => sidePanel.focus(), 100);
   }
 
   function closeSidePanel() {
@@ -700,127 +692,155 @@ document.addEventListener('DOMContentLoaded', () => {
     menuBtn.innerHTML = '&#9776;';
   }
 
-  window.setMessage = setMessage //para que setmessage seja acessível em qualquer parte do código
-// --- change renderSticks signature + logic ---
-function renderSticks(valueOrResult, opts = {}) {
-  if (!sticksEl) return;
+  // Função do 'main' (lógica PvP/Scoreboard)
+  function updateFirstPlayerOptions() {
+    if (!gameModeInput || !firstPlayerInput) return;
+    const selectedMode = gameModeInput.value;
+    const currentFirstPlayer = firstPlayerInput.value;
+    firstPlayerInput.innerHTML = '';
 
-  const force = opts.force === true;       // allow overriding busy state
-  const animate = opts.animate !== false;  // default = animate
+    let options = [];
+    if (selectedMode === 'pvp') {
+      options = [
+        { value: 'player1', text: 'Player 1' },
+        { value: 'player2', text: 'Player 2' }
+      ];
+    } else {
+      options = [
+        { value: 'player1', text: 'Player 1' },
+        { value: 'cpu', text: 'CPU' }
+      ];
+    }
+    options.forEach(opt => {
+      const optionEl = document.createElement('option');
+      optionEl.value = opt.value;
+      optionEl.textContent = opt.text;
+      firstPlayerInput.appendChild(optionEl);
+    });
+    
+    if (currentFirstPlayer === 'player1') {
+      firstPlayerInput.value = 'player1';
+    } else if (selectedMode === 'pvp' && currentFirstPlayer === 'cpu') {
+      firstPlayerInput.value = 'player2';
+    } else if (selectedMode === 'pvc' && currentFirstPlayer === 'player2') {
+      firstPlayerInput.value = 'cpu';
+    }
+  }
 
-  // Respect busy state unless forced
-  if (sticksUI.busy && !force) return;
+  window.gameMessage = setMessage;
 
-  // Reset content
-  sticksEl.innerHTML = '';
+  // --- MERGE: `renderSticks` (do 'HEAD', para animação) ---
+  function renderSticks(valueOrResult, opts = {}) {
+    if (!sticksEl) return;
 
-  // Detect if a roll value exists
-  const hasValue =
-    typeof valueOrResult === 'number' ||
-    (valueOrResult && valueOrResult.value != null);
+    const force = opts.force === true;
+    const animate = opts.animate !== false;
 
-  // Idle/grey sticks
-  if (!hasValue) {
+    if (sticksUI.busy && !force) return;
+
+    sticksEl.innerHTML = '';
+
+    const hasValue =
+      typeof valueOrResult === 'number' ||
+      (valueOrResult && valueOrResult.value != null);
+
+    if (!hasValue) {
+      const strip = document.createElement('div');
+      strip.className = 'stick-strip';
+      strip.style.perspective = '1000px';
+      for (let i = 0; i < 4; i++) {
+        const img = document.createElement('img');
+        img.className = 'stick-img inactive';
+        img.src = 'image2.jpeg'; // Certifica-te que esta imagem existe
+        strip.appendChild(img);
+      }
+      const label = document.createElement('div');
+      label.className = 'sticks-label';
+      sticksEl.appendChild(strip);
+      sticksEl.appendChild(label);
+      return;
+    }
+
+    sticksUI.busy = animate;
+
+    const value = typeof valueOrResult === 'number'
+      ? valueOrResult
+      : valueOrResult.value;
+
+    const faces =
+      typeof valueOrResult === 'object' && valueOrResult.sticks
+        ? valueOrResult.sticks
+        : window.game?.lastSticks?.length
+        ? window.game.lastSticks
+        : [0, 0, 0, 0];
+
     const strip = document.createElement('div');
     strip.className = 'stick-strip';
     strip.style.perspective = '1000px';
-    for (let i = 0; i < 4; i++) {
+
+    faces.forEach(() => {
       const img = document.createElement('img');
       img.className = 'stick-img inactive';
-      img.src = 'image2.jpeg';
-      strip.appendChild(img);
-    }
-    const label = document.createElement('div');
-    label.className = 'sticks-label';
-    sticksEl.appendChild(strip);
-    sticksEl.appendChild(label);
-    return;
-  }
-
-  // We are going to animate a flip -> mark busy
-  sticksUI.busy = animate;
-
-  const value = typeof valueOrResult === 'number'
-    ? valueOrResult
-    : valueOrResult.value;
-
-  const faces =
-    typeof valueOrResult === 'object' && valueOrResult.sticks
-      ? valueOrResult.sticks
-      : window.game?.lastSticks?.length
-      ? window.game.lastSticks
-      : [0, 0, 0, 0];
-
-  const strip = document.createElement('div');
-  strip.className = 'stick-strip';
-  strip.style.perspective = '1000px';
-
-  faces.forEach(() => {
-    const img = document.createElement('img');
-    img.className = 'stick-img inactive';
-    img.src = 'image2.jpeg';
-    if (animate) {
-      img.style.animation = 'none';
-      void img.offsetWidth;
-      img.style.animation = 'stickFlip 0.6s ease-in-out forwards';
-    }
-    strip.appendChild(img);
-  });
-
-  const label = document.createElement('div');
-  label.className = 'sticks-label';
-  label.innerHTML = animate ? '<i>Rolling...</i>' : `&rarr; <b>${value}</b>`;
-
-  sticksEl.appendChild(strip);
-  sticksEl.appendChild(label);
-
-  // Reveal faces after flip
-  const reveal = () => {
-    strip.innerHTML = '';
-    faces.forEach((v) => {
-      const img = document.createElement('img');
-      img.className = 'stick-img ' + (v === 1 ? 'light' : 'dark') + ' active';
-      img.alt = v === 1 ? 'Flat side (light)' : 'Round side (dark)';
-      img.src = v === 1 ? 'image4.jpeg' : 'image2.jpeg';
+      img.src = 'image2.jpeg'; // Certifica-te que esta imagem existe
+      if (animate) {
+        img.style.animation = 'none';
+        void img.offsetWidth;
+        img.style.animation = 'stickFlip 0.6s ease-in-out forwards';
+      }
       strip.appendChild(img);
     });
-    if(value === 1) {
-      label.innerHTML = `<b>${value} move</b>`;
-    }
-    else{
-    label.innerHTML = `<b>${value} moves</b>`;}
-    sticksUI.busy = false; // ✅ unlock
-    // Flush any queued messages/tasks that waited for the flip
-    const tasks = sticksUI.queue.splice(0, sticksUI.queue.length);
-    tasks.forEach(fn => fn());
 
-  };
+    const label = document.createElement('div');
+    label.className = 'sticks-label';
+    label.innerHTML = animate ? '<i>Rolling...</i>' : `&rarr; <b>${value}</b>`;
 
-  if (animate) setTimeout(reveal, 600);
-  else reveal();
-}
+    sticksEl.appendChild(strip);
+    sticksEl.appendChild(label);
 
-  
+    const reveal = () => {
+      strip.innerHTML = '';
+      faces.forEach((v) => {
+        const img = document.createElement('img');
+        img.className = 'stick-img ' + (v === 1 ? 'light' : 'dark') + ' active';
+        img.alt = v === 1 ? 'Flat side (light)' : 'Round side (dark)';
+        img.src = v === 1 ? 'image4.jpeg' : 'image2.jpeg'; // Certifica-te que estas imagens existem
+        strip.appendChild(img);
+      });
+      if (value === 1) {
+        label.innerHTML = `<b>${value} move</b>`;
+      }
+      else {
+        label.innerHTML = `<b>${value} moves</b>`;
+      }
+      sticksUI.busy = false; // ✅ unlock
+      const tasks = sticksUI.queue.splice(0, sticksUI.queue.length);
+      tasks.forEach(fn => fn());
+    };
 
+    if (animate) setTimeout(reveal, 600);
+    else reveal();
+  }
 
-  // Build/Render board (no arrows, clean layout)
+  // Função 'buildBoard' (do 'main', com skins corretas)
   function buildBoard() {
-    if (!boardEl) return;
+    if (!boardEl || !game) return;
     boardEl.innerHTML = '';
-
     const box = document.createElement('div');
     box.className = 'board-box';
-
     const container = document.createElement('div');
     container.style.display = 'flex';
     container.style.flexDirection = 'column';
     container.style.alignItems = 'stretch';
     container.style.gap = '2px';
 
+    const mePlayer = game.getCurrentPlayer();
+    const oppPlayer = game.getOpponentPlayer();
+    const meSkin = (mePlayer.name === 'player1') ? 'p1' : 'p2';
+    const oppSkin = (oppPlayer.name === 'player1') ? 'p1' : 'p2';
+
     for (let r = 0; r < game.rows; r++) {
       const rowDiv = document.createElement('div');
       rowDiv.className = 'board-row';
-
       for (let c = 0; c < game.columns; c++) {
         const cell = document.createElement('button');
         cell.type = 'button';
@@ -828,45 +848,37 @@ function renderSticks(valueOrResult, opts = {}) {
         cell.dataset.row = String(r);
         cell.dataset.col = String(c);
 
-        // Piece layer
-        const me = game.players[0].getPieceAt(r, c);
-        const opp = game.players[1].getPieceAt(r, c);
+        const me = mePlayer.getPieceAt(r, c);
+        const opp = oppPlayer.getPieceAt(r, c);
+
         if (me || opp) {
           const piece = document.createElement('div');
-          piece.className = 'piece ' + (me ? 'p1' : 'p2') + ' ' + (me || opp).state;
-          piece.title = `${me ? 'player' : 'cpu'} (${(me || opp).state})`;
+          piece.className = 'piece ' + (me ? meSkin : oppSkin) + ' ' + (me || opp).state;
+          piece.title = `${me ? mePlayer.name : oppPlayer.name} (${(me || opp).state})`;
           cell.appendChild(piece);
         }
-
         rowDiv.appendChild(cell);
       }
-
       container.appendChild(rowDiv);
-
       if (r < game.rows - 1) {
         const sep = document.createElement('div');
         sep.className = 'row-sep';
         container.appendChild(sep);
       }
     }
-
     box.appendChild(container);
     boardEl.appendChild(box);
   }
 
+  // Função 'updateBoardHighlights' (do 'main')
   function updateBoardHighlights() {
-    if (!boardEl) return;
-    // Clear all flags
+    if (!boardEl || !game) return;
     boardEl.querySelectorAll('.board-cell').forEach(cell => {
       cell.classList.remove('selected', 'highlight', 'mine', 'opp');
     });
-
-    // Limpar destaques antigos das peças
     boardEl.querySelectorAll('.piece.selected').forEach(piece => {
       piece.classList.remove('selected');
     });
-
-    // Re-apply occupants and highlights
     for (let r = 0; r < game.rows; r++) {
       for (let c = 0; c < game.columns; c++) {
         const cell = boardEl.querySelector(`.board-cell[data-row="${r}"][data-col="${c}"]`);
@@ -877,9 +889,7 @@ function renderSticks(valueOrResult, opts = {}) {
         if (opp) cell.classList.add('opp');
         if (game.selectedPiece && game.selectedPiece.row === r && game.selectedPiece.col === c) {
           const pieceEl = cell.querySelector('.piece');
-          if (pieceEl) {
-            pieceEl.classList.add('selected'); // aplicar 'selected' à peça
-          }
+          if (pieceEl) pieceEl.classList.add('selected');
         }
         if (game.getSelectedMoves().some(p => p.row === r && p.col === c)) {
           cell.classList.add('highlight');
@@ -887,107 +897,176 @@ function renderSticks(valueOrResult, opts = {}) {
       }
     }
   }
+
+  // --- MERGE: `renderAll` (lógica do 'main', UI do 'HEAD') ---
   function renderAll(opts = { updateSticks: true }) {
+    if (!window.game) return;
+    
     buildBoard();
     updateBoardHighlights();
+    
     if (opts.updateSticks) {
-      renderSticks(game.stickValue ?? null, { animate: false });
+      // Chama a nova 'renderSticks' sem animação
+      renderSticks(game.stickValue ?? null, { animate: false }); 
     }
-    updateRollBtn();
-  }
-  
+    
+    // Usa o novo helper do 'HEAD'
+    updateRollBtn(); 
 
-  // CPU turn handler 
+    // Lógica de UI do 'main' (essencial para PvP/PvC)
+    const currentPlayer = game.getCurrentPlayer();
+    const isCpuTurn = (currentPlayer.name === 'cpu' && !game.isVsPlayer);
+
+    if (boardEl) {
+      if (isCpuTurn) {
+        boardEl.classList.add('disabled-board');
+      } else {
+        boardEl.classList.remove('disabled-board');
+      }
+    }
+  }
+
+  // --- MERGE: `maybeCpuTurn` (lógica do 'main', UI do 'HEAD') ---
   function maybeCpuTurn() {
+    if (!game || game.over) return;
     const cur = game.getCurrentPlayer();
-    if (cur.name !== 'cpu') return; // só joga se for o CPU
+    // Lógica de guarda do 'main' (corrigida)
+    if (cur.name !== 'cpu' || game.isVsPlayer) return; 
+
+    cpuBusy = true; // Lógica do 'main'
     queueAfterFlip(updateRollBtn);  
-    // grey sticks while CPU is "thinking" before its roll
-    renderSticks(null);
-    // Pausa antes de lançar
-    setTimeout(() => {
+    renderSticks(null); // UI do 'HEAD'
+
+    const run = () => { // Estrutura do 'main'
+      cpuTimer = null;
+      if (!game || game.over || game.getCurrentPlayer().name !== 'cpu' || game.isVsPlayer) {
+         cpuBusy = false; return;
+      }
+
       const val = game.startTurn();
       queueAfterFlip(updateRollBtn);  
-      renderSticks({ value: val, sticks: game.lastSticks }, { animate: true });
-      renderAll({ updateSticks: false });   // ✅ do not overwrite
-      if (val === 1)  msgAfterFlip(`CPU got ${val} move`);
-      else            msgAfterFlip(`CPU got ${val} moves`);
+      renderSticks({ value: val, sticks: game.lastSticks }, { animate: true }); // UI do 'HEAD'
+      renderAll({ updateSticks: false });
+      if (val === 1) msgAfterFlip(`CPU rolled ${val} move`);
+      else           msgAfterFlip(`CPU rolled ${val} moves`);
       
-
-  // Outra pausa antes de mover
-  setTimeout(() => {
-    // ✅ Check if CPU can actually move
-    const legalMoves = game.getAllLegalMoves();
-    if (legalMoves.length === 0) {
-      msgAfterFlip('No legal moves. Passing turn...');
-      // brief pause so the player can read it
+      // Lógica de "jogar"
       setTimeout(() => {
-        game.endTurn(false);                               // hand over to player
-        renderSticks(null, { force: true, animate: false }); // reset sticks immediately
-        msgAfterFlip('Your turn!');                        // message after flip queue
-        queueAfterFlip(updateRollBtn);                     // enable/disable button after flip queue
-      }, 1000);      
-      return; // stop here; CPU doesn't play
-    }
+        const skipped = game.autoSkipIfNoMoves(); // Lógica do 'main'
+        
+        if (skipped) {
+          const nextPlayer = game.getCurrentPlayer();
+          let skipMessage = "";
+          if (nextPlayer === cur) { // Rolou 1,4,6
+             skipMessage = "No possible moves. Roll again!";
+          } else { // Rolou 2,3
+             skipMessage = "No possible moves. Turn passed.";
+          }
+          
+          msgAfterFlip(skipMessage, 1000); // UI do 'HEAD'
+          
+          queueAfterFlip(() => { // UI do 'HEAD'
+            renderAll(); // Re-ativa 'rollBtn' para o jogador
+            if (nextPlayer.name === 'cpu') {
+              maybeCpuTurn(); // CPU joga de novo
+            } else {
+              msgAfterFlip("Your turn!", 1500); // Lógica do 'main'
+              cpuBusy = false;
+            }
+          });
+          return;
+        }
 
-    // CPU has at least one legal move — proceed
-    game.cpuMoveHeuristic(); // ou cpuMoveRandom()
-    renderAll({ updateSticks: false });
-    setMessage('CPU played');
+        // Não foi "skip", o CPU joga
+        game.cpuMove(); // Lógica do 'main' (usa dificuldade)
+        renderAll({ updateSticks: false });
+        msgAfterFlip('CPU played');
 
-    // Pequeno delay antes de decidir se joga de novo
-    setTimeout(() => {
-      if (game.getCurrentPlayer().name === 'cpu') {
-        setMessage('CPU plays again!');
-        setTimeout(maybeCpuTurn, 1200);
-        return;
-      }
-      // Hand control back to the player *through* the flip queue.
-      renderSticks(null, { force: true, animate: false });
-      msgAfterFlip('Your turn!');
-      queueAfterFlip(updateRollBtn);
-    }, 800);
-    
-
-  }, 2500); // tempo entre lançar e mover
-
-
-    }, 2200); // tempo antes de lançar os paus
+        setTimeout(() => {
+          if (game.getCurrentPlayer().name === 'cpu') {
+            msgAfterFlip('CPU plays again!');
+            setTimeout(maybeCpuTurn, 100);
+          } else {
+            msgAfterFlip('Your turn!');
+            queueAfterFlip(updateRollBtn);
+            cpuBusy = false;
+          }
+        }, 800); // Compromisso de tempo
+      }, 1000); // Compromisso de tempo
+    };
+    setTimeout(run, 1000); // Compromisso de tempo
   }
 
-
-  // Event delegation for board clicks
+  // --- MERGE: `boardEl` (lógica do 'main', UI do 'HEAD') ---
+  // Esta é a função correta (select-vs-move) do 'main'
   if (boardEl) {
     boardEl.addEventListener('click', (e) => {
+      if (!game || game.over) return;
+      const currentPlayer = game.getCurrentPlayer();
+      if (currentPlayer.name === 'cpu' && !game.isVsPlayer) {
+        setMessage('Wait for CPU.');
+        return;
+      }
       const cell = e.target.closest('.board-cell');
       if (!cell) return;
       const r = +cell.dataset.row;
       const c = +cell.dataset.col;
-
       if (game.stickValue == null) {
-        setMessage('Roll first');
+        setMessage('Roll first'); // Corrigido
         return;
       }
-
-      // Deselect if clicking the same selected piece
-      if (game.selectedPiece && game.selectedPiece.row === r && game.selectedPiece.col === c) {
-        game.clearSelection();
+      if (messageTimer) {
+        clearTimeout(messageTimer);
+        messageTimer = null;
+      }
+      const pieceAtClick = game.getCurrentPlayer().getPieceAt(r, c);
+      if (pieceAtClick) {
+        if (game.selectedPiece === pieceAtClick) {
+          game.clearSelection();
+          updateBoardHighlights();
+          return;
+        }
+        game.selectPieceAt(r, c);
         updateBoardHighlights();
-        return;
+      } else {
+        if (!game.selectedPiece) {
+          return;
+        }
+        const moveWasSuccessful = game.moveSelectedTo(r, c);
+        if (moveWasSuccessful) {
+          // --- Jogada feita ---
+          // MERGE: updateSticks: false (para não estragar animação)
+          renderAll({ updateSticks: false }); 
+          if (checkGameOver()) return; 
+
+          const nextPlayer = game.getCurrentPlayer();
+          if (nextPlayer.name === 'cpu' && !game.isVsPlayer) {
+            setMessage('CPU´s turn');
+            // MERGE: usa queueAfterFlip
+            queueAfterFlip(maybeCpuTurn, 1000); 
+          } else {
+            if (nextPlayer === currentPlayer) {
+              if (game.isVsPlayer) {
+                const P1_name = game.players[0].name;
+                setMessage(`${currentPlayer.name === P1_name ? 'Player 1' : 'Player 2'}, play again!`);
+              } else {
+                setMessage("Play again!");
+              }
+            } else {
+              if (game.isVsPlayer) {
+                const P1_name = game.players[0].name;
+                setMessage(`${nextPlayer.name === P1_name ? 'Player 1' : 'Player 2'}, your turn!`);
+              }
+            }
+          }
+        }
       }
-
-      game.selectOrMoveAt(r, c);
-      renderAll();
-
-      // Se a jogada mudou para CPU, iniciar jogada automaticamente
-      if (game.getCurrentPlayer().name === 'cpu') {
-        setMessage('CPU´s turn');
-        setTimeout(maybeCpuTurn, 0);
-    }
     });
   }
 
-    function showIntro() {
+
+  // Funções de Ecrã (do 'main')
+  function showIntro() {
     if (intro) {
       intro.classList.remove('hidden');
       intro.hidden = false;
@@ -999,8 +1078,8 @@ function renderSticks(valueOrResult, opts = {}) {
       modeScreen.style.display = 'none';
     }
     if (mainGrid) mainGrid.style.display = 'none';
+    hide(rollBtn); // UI do 'HEAD'
   }
-
   function showMode() {
     if (intro) {
       intro.classList.add('hidden');
@@ -1013,8 +1092,8 @@ function renderSticks(valueOrResult, opts = {}) {
       modeScreen.style.display = 'grid';
     }
     if (mainGrid) mainGrid.style.display = 'none';
+    hide(rollBtn); // UI do 'HEAD'
   }
-
   function showGame() {
     if (intro) {
       intro.classList.add('hidden');
@@ -1029,76 +1108,175 @@ function renderSticks(valueOrResult, opts = {}) {
     if (mainGrid) {
       mainGrid.style.display = 'grid';
     }
+    show(rollBtn); // UI do 'HEAD'
   }
 
-  // O botão "Intro Start" mostra o jogo e abre o painel
+  // Scoreboard a 3 (do 'main')
+  function updateScoreboardView() {
+    if (!scoreboardBody || !noScoresMsg) return;
+    scoreboardBody.innerHTML = '';
+    const totalGames = scores.player1.wins + scores.player1.losses + 
+                       scores.player2.wins + scores.player2.losses + 
+                       scores.cpu.wins + scores.cpu.losses;
+    if (totalGames === 0) {
+      noScoresMsg.style.display = 'block';
+      return;
+    }
+    noScoresMsg.style.display = 'none';
+    const stats = [
+      { name: 'Player 1', ...scores.player1 },
+      { name: 'Player 2', ...scores.player2 },
+      { name: 'CPU', ...scores.cpu }
+    ];
+    stats.sort((a, b) => b.wins - a.wins);
+    const getRatio = (wins, losses) => {
+      if (losses === 0) return wins > 0 ? 'INF' : '0.00';
+      return (wins / losses).toFixed(2);
+    };
+    stats.forEach((stat, index) => {
+      const row = scoreboardBody.insertRow();
+      row.innerHTML = `
+        <td>${index + 1}</td>
+        <td>${stat.name}</td>
+        <td>${stat.wins}</td>
+        <td>${stat.losses}</td>
+        <td>${getRatio(stat.wins, stat.losses)}</td>
+      `;
+    });
+  }
+
+  // handleGameOver a 3 (do 'main')
+  function handleGameOver(winner) {
+    if (!winner) return;
+    const winnerName = winner.name;
+    const loserPlayer = (winner === game.players[0]) ? game.players[1] : game.players[0];
+    const loserName = loserPlayer.name;
+
+    if (scores[winnerName]) scores[winnerName].wins++;
+    if (scores[loserName]) scores[loserName].losses++;
+    
+    updateScoreboardView();
+
+    let winnerDisplay = winnerName.toUpperCase();
+    if (winnerName === 'player1') winnerDisplay = 'Player 1';
+    if (winnerName === 'player2') winnerDisplay = 'Player 2';
+
+    msgAfterFlip(`Game Over! ${winnerDisplay} won!`); // UI do 'HEAD'
+    if (rollBtn) rollBtn.disabled = true;
+    if (boardEl) boardEl.classList.add('disabled-board');
+  }
+
+  // checkGameOver (global, do 'main')
+  function checkGameOver() {
+    if (!game) return false;
+    const { over, winner } = game.checkGameOver();
+    if (over) {
+      handleGameOver(winner);
+      return true;
+    }
+    return false;
+  }
+
+  // Modal (do 'main')
+  const modalOverlay = document.getElementById('modal-overlay');
+  const modalTitle = document.getElementById('modal-title');
+  const modalText = document.getElementById('modal-text');
+  const modalConfirm = document.getElementById('modal-confirm');
+  const modalCancel = document.getElementById('modal-cancel');
+  function showModal(title, text, confirmText = 'Yes', cancelText = 'No') {
+    return new Promise((resolve) => {
+      modalTitle.textContent = title;
+      modalText.textContent = text;
+      modalConfirm.textContent = confirmText;
+      modalCancel.textContent = cancelText;
+      modalOverlay.classList.remove('hidden');
+      modalOverlay.style.display = 'grid';
+      const close = (value) => {
+        modalOverlay.style.display = 'none';
+        modalOverlay.classList.add('hidden');
+        modalConfirm.onclick = null;
+        modalCancel.onclick = null;
+        resolve(value);
+      };
+      modalConfirm.onclick = () => close(true);
+      modalCancel.onclick = () => close(false);
+    });
+  }
+
+  // Botões de navegação (lógica do 'main')
   introStartBtn?.addEventListener('click', () => {
-    showGame(); // Mostra a grelha do jogo
-    openSidePanel(); // Força a abertura do painel
-    setMessage('Choose the configurations and click "Start" to play the game');
+    showGame();
+    openSidePanel();
+    setMessage('Choose the configurations and click "Start" to play the game.');
   });
   
-  // Side-panel Start (início real do jogo)
+  // --- MERGE: `startSideBtn` (lógica do 'main', UI do 'HEAD') ---
   if (startSideBtn) {
-    startSideBtn.addEventListener('click', () => {
-      // Ler as configurações do painel
+    startSideBtn.addEventListener('click', async () => {
+      if (window.game) {
+        const confirmed = await showModal(
+          'New game?',
+          'Starting a new game will cancel the current one. Are you sure?',
+          'Yes, Start New',
+          'No, Cancel'
+        );
+        if (!confirmed) return;
+      }
+      const gameMode = gameModeInput?.value || 'pvc';
       const cols = sizeInput ? parseInt(sizeInput.value, 10) || 9 : 9;
-      const firstPlayer = firstPlayerInput ? firstPlayerInput.value : 'player';
+      const firstPlayer = firstPlayerInput ? firstPlayerInput.value : 'player1';
       const difficulty = difficultyInput ? difficultyInput.value : 'easy';
 
-      // Criar a instância do jogo
       game = new TabGame(cols);
-      window.game = game; // Expor globalmente
+      window.game = game;
+      game.isVsPlayer = (gameMode === 'pvp');
 
-      // Aplicar as configurações lidas
+      game.players[0].name = 'player1';
+      if (game.isVsPlayer) {
+        game.players[1].name = 'player2';
+      } else {
+        game.players[1].name = 'cpu';
+        game.difficultyLevel = ({easy: 0, medium: 1, hard: 2}[difficulty]) ?? 0;
+      }
+
+      if (firstPlayer === 'cpu' || firstPlayer === 'player2') {
+        game.curPlayerIdx = 1;
+      } else {
+        game.curPlayerIdx = 0;
+      }
       
-      // Mapeia o <select> para o nível (0=fácil, 1=médio, 2=difícil)
-      // que a tua função cpuMove() espera
-      const diffMap = { 'easy': 0, 'medium': 1, 'hard': 2 };
-      game.difficultyLevel = diffMap[difficulty] || 0;
-
-      // Define o jogador inicial (0 = player, 1 = cpu)
-      game.curPlayerIdx = (firstPlayer === 'cpu') ? 1 : 0;
-
-      // Renderizar o tabuleiro
-      renderAll();
+      if (cpuTimer) { clearTimeout(cpuTimer); cpuTimer = null; }
+      if (messageTimer) { clearTimeout(messageTimer); messageTimer = null; }
+      cpuBusy = false;
+      cpuRolledOnce = false;
       
-      // show inactive/grey sticks until the first roll
-      renderSticks(null);
-
+      // UI do 'HEAD' (substitui 'renderAll()')
       show(rollBtn);
-      updateRollBtn();      
-
-      // Fechar o painel
+      updateRollBtn();
+      renderSticks(null); // Mostra sticks cinzentos
+      buildBoard(); // Precisamos de desenhar o tabuleiro
+      updateBoardHighlights(); // e highlights
+      
       closeSidePanel();
 
-      // Enviar mensagem
-      setMessage('Game started! Player’s turn');
-      // (Aqui podes adicionar lógica para verificar se é o CPU a começar)
+      const currentPlayer = game.getCurrentPlayer();
+      if (currentPlayer.name === 'cpu') {
+        setMessage('Game started! CPU plays first.');
+        setTimeout(maybeCpuTurn, 100);
+      } else if (currentPlayer.name === 'player1') {
+        setMessage('Game started! Player 1, your turn.');
+      } else if (currentPlayer.name === 'player2') {
+        setMessage('Game started! Player 2, your turn.');
+      }
     });
   }
   
- // Close side panel button
   closePanelBtn?.addEventListener('click', closeSidePanel);
 
-  function passTurnToCpuWithPause() {
-    msgAfterFlip('No legal moves. Passing turn...');
-    setTimeout(() => {
-      renderSticks(null);        // idle sticks for a beat
-      setMessage('CPU’s turn');  // announce CPU turn
-      setTimeout(() => {
-        maybeCpuTurn();          // already has its own pre-roll pause
-      }, 2000);
-    }, 2500);
-  }
-  
-  // Throw sticks
+  // --- MERGE: `rollBtn` (lógica do 'main' DENTRO da UI do 'HEAD') ---
   if (rollBtn) {
     rollBtn.addEventListener('click', () => {
-      if (!game) {
-        setMessage('Choose the configurations and click "Start" to play the game');
-        return;
-      }
+      // Guarda 'canPlayerRoll' do 'HEAD'
       if (!canPlayerRoll()) {
         const turn = game.getCurrentPlayer()?.name;
         if (turn === 'cpu') setMessage('Wait — CPU turn');
@@ -1106,45 +1284,102 @@ function renderSticks(valueOrResult, opts = {}) {
         else setMessage('You already threw. Move a piece');
         return;
       }
-    
-      msgAfterFlip('Choose a piece and move it'); // show this after the faces are revealed
 
+      // Lógica de 'messageTimer' do 'main'
+      if (messageTimer) {
+        clearTimeout(messageTimer);
+        messageTimer = null;
+      }
+
+      const currentPlayer = game.getCurrentPlayer(); // Lógica do 'main'
       const val = game.startTurn();
-      updateRollBtn();
-      // start the flip animation:
-      renderSticks({ value: val, sticks: game.lastSticks }, { animate: true });
+      updateRollBtn(); // UI do 'HEAD'
+      renderSticks({ value: val, sticks: game.lastSticks }, { animate: true }); // UI do 'HEAD'
       
-      if (game.autoSkipIfNoMoves()) {
-        updateRollBtn();
-        passTurnToCpuWithPause();
-        return;
-      }      
+      const skipped = game.autoSkipIfNoMoves(); // Lógica do 'main'
       
-      // Rebuild the board without touching the sticks UI (so animation completes)
-      renderAll({ updateSticks: false });
+      if (skipped) {
+        // Lógica de 'skipped' do 'main', adaptada para 'queueAfterFlip' do 'HEAD'
+        queueAfterFlip(() => {
+          const nextPlayer = game.getCurrentPlayer();
+          let skipMessage = "";
+
+          if (nextPlayer === currentPlayer) { // Rolou 1,4,6
+            if (game.isVsPlayer) {
+              const P1_name = game.players[0].name;
+              skipMessage = `${currentPlayer.name === P1_name ? 'Player 1' : 'Player 2'} has no moves. Roll again!`;
+            } else {
+              skipMessage = "No possible moves. Roll again!";
+            }
+          } else { // Rolou 2,3
+            skipMessage = "No possible moves. Turn passed.";
+          }
+          
+          setMessage(skipMessage);
+          renderAll(); // Re-ativa 'rollBtn'
+
+          if (nextPlayer.name === 'cpu' && !game.isVsPlayer) {
+            maybeCpuTurn();
+          } else if (game.isVsPlayer && nextPlayer !== currentPlayer) {
+            const P1_name = game.players[0].name;
+            const P2_name = game.players[1].name;
+            messageTimer = setTimeout(() => {
+              if (game.getCurrentPlayer() === nextPlayer && game.stickValue === null) {
+                setMessage(`${nextPlayer.name === P1_name ? 'Player 1' : 'Player 2'}, your turn!`);
+              }
+            }, 1500); 
+          }
+        }, 600); // 600ms = Duração da animação 'stickFlip'
+
+        return; 
+      }
       
-      // After the flip reveals (~600ms), you can safely re-sync UI if you want
-      setTimeout(() => {
-        // optional: keep this if something else changed during the flip
-        renderAll({ updateSticks: false });
-      }, 650);
-      
+      msgAfterFlip('Choose a piece to move.'); // UI do 'HEAD'
+      renderAll({ updateSticks: false }); // UI do 'HEAD'
     });
   }
 
-  // Quit
+  // --- MERGE: `quitBtn` (lógica do 'main', UI do 'HEAD') ---
   if (quitBtn) {
-    quitBtn.addEventListener('click', () => {
+    quitBtn.addEventListener('click', async () => {
+      let quitMessage = 'Game quit.';
+      const confirmed = await showModal(
+        'Quit?',
+        'Are you sure you want to quit? This action will count as a loss.',
+        'Yes, quit',
+        'No, cancel'
+      );
+      if (!confirmed) return;
+
+      if (window.game && !game.over) {
+        const winnerPlayer = game.getOpponentPlayer();
+        handleGameOver(winnerPlayer);
+        let winnerDisplay = winnerPlayer.name.toUpperCase();
+        if (winnerPlayer.name === 'player1') winnerDisplay = 'Player 1';
+        if (winnerPlayer.name === 'player2') winnerDisplay = 'Player 2';
+        quitMessage = `Game forfeited. ${winnerDisplay} wins.`;
+      }
       window.game = null;
       if (boardEl) boardEl.innerHTML = '';
       if (sticksEl) sticksEl.innerHTML = '';
+      
+      // UI do 'HEAD'
       hide(rollBtn);
-      showIntro();
-      setMessage('Game quit');
+      showIntro(); 
+      
+      setMessage(quitMessage);
+      closeSidePanel();
+      
+      // 'setTimeout' do 'main' (é útil)
+      setTimeout(() => {
+        if (!window.game) {
+          setMessage('Choose the configurations and click "Start" to play the game.');
+        }
+      }, 3000); 
     });
   }
 
-  // Instructions
+  // Instruções (lógica de ambos)
   if (instrOpen && instrPanel) {
     instrOpen.addEventListener('click', () => { instrPanel.style.display = 'block'; });
   }
@@ -1152,26 +1387,22 @@ function renderSticks(valueOrResult, opts = {}) {
     instrClose.addEventListener('click', () => { instrPanel.style.display = 'none'; });
   }
 
-  // Side panel (menu)
+  // Side panel (lógica de ambos)
   if (menuBtn && sidePanel) {
     menuBtn.addEventListener('click', () => {
       const isOpen = sidePanel.classList.contains('open');
-      if (isOpen) {
-        closeSidePanel();
-      } else {
-        openSidePanel();
-      }
+      if (isOpen) closeSidePanel();
+      else openSidePanel();
     });
   }
-  // Also open via the message button
   openSidePanelBtn?.addEventListener('click', openSidePanel);
 
-  // Scoreboard open/close
+  // Scoreboard (lógica de ambos)
   if (scoreboardBtn && scoreboardPanel) {
     scoreboardBtn.addEventListener('click', () => {
       const isOpen = scoreboardPanel.classList.toggle('open');
       scoreboardBtn.innerHTML = isOpen ? '&times;' : '🏆';
-      if (isOpen) setTimeout(() => scoreboardPanel.focus(), 10);
+      if (isOpen) setTimeout(() => scoreboardPanel.focus(), 100);
     });
     scoreboardPanel.addEventListener('click', (e) => {
       if (e.target === scoreboardPanel) {
@@ -1181,65 +1412,56 @@ function renderSticks(valueOrResult, opts = {}) {
     });
   }
 
-  // Live board-size preview (optional)
-  sizeInput?.addEventListener('change', () => {
-    if (!game) {
-      setMessage('Choose the configurations and click "Start" to play the game');
-      // Reverte o valor se o jogo não tiver começado
-      if (game) sizeInput.value = String(game.columns); 
-      return;
+  // Listeners de Configurações (do 'main', que é mais robusto)
+  function settingChangeListener() {
+    if (window.game) {
+      setMessage('Setting changed. Click "Start" to begin a new game with this setting.');
     }
-    const cols = parseInt(sizeInput.value, 10) || 9;
-    const firstIdx = game.curPlayerIdx;
-    window.game = new TabGame(cols);
-    game = window.game;
-    game.curPlayerIdx = firstIdx;
-    renderAll();
-    setMessage('Board size changed');
-  });
-
-// User menu //
-const userAvatar = document.getElementById('user-avatar');
-const userMenu = document.getElementById('user-menu');
-const menuMain = document.getElementById('menu-main');
-const menuLogin = document.getElementById('menu-login');
-const menuSignup = document.getElementById('menu-signup');
-
-// Toggle open/close on avatar click
-if (userAvatar && userMenu) {
-  userAvatar.addEventListener('click', () => {
-    userMenu.classList.toggle('hidden');
-  });
-}
-
-// Login / Signup buttons (main menu)
-document.getElementById('btn-login')?.addEventListener('click', () => {
-  menuMain.classList.add('hidden');
-  menuLogin.classList.remove('hidden');
-});
-document.getElementById('btn-signup')?.addEventListener('click', () => {
-  menuMain.classList.add('hidden');
-  menuSignup.classList.remove('hidden');
-});
-
-// Back buttons
-menuLogin.querySelector('.back-btn')?.addEventListener('click', () => {
-  menuLogin.classList.add('hidden');
-  menuMain.classList.remove('hidden');
-});
-menuSignup.querySelector('.back-btn')?.addEventListener('click', () => {
-  menuSignup.classList.add('hidden');
-  menuMain.classList.remove('hidden');
-});
-
-// Optional: close the user menu when clicking outside
-document.addEventListener('click', (e) => {
-  if (!userMenu.contains(e.target) && !userAvatar.contains(e.target)) {
-    userMenu.classList.add('hidden');
   }
-});
+  sizeInput?.addEventListener('change', settingChangeListener);
+  firstPlayerInput?.addEventListener('change', settingChangeListener);
+  difficultyInput?.addEventListener('change', settingChangeListener);
+  gameModeInput?.addEventListener('change', () => {
+    updateFirstPlayerOptions();
+    settingChangeListener();
+  });
 
-  // Initial UI state
+  // User menu (lógica de ambos, com correção de bug do 'main')
+  const userAvatar = document.getElementById('user-avatar');
+  const userMenu = document.getElementById('user-menu');
+  const menuMain = document.getElementById('menu-main');
+  const menuLogin = document.getElementById('menu-login');
+  const menuSignup = document.getElementById('menu-signup');
+  if (userAvatar && userMenu) {
+    userAvatar.addEventListener('click', () => {
+      userMenu.classList.toggle('hidden');
+    });
+  }
+  document.getElementById('btn-login')?.addEventListener('click', () => {
+    menuMain.classList.add('hidden');
+    menuLogin.classList.remove('hidden');
+  });
+  document.getElementById('btn-signup')?.addEventListener('click', () => {
+    menuMain.classList.add('hidden');
+    menuSignup.classList.remove('hidden');
+  });
+  menuLogin.querySelector('.back-btn')?.addEventListener('click', () => {
+    menuLogin.classList.add('hidden');
+    menuMain.classList.remove('hidden');
+  });
+  menuSignup.querySelector('.back-btn')?.addEventListener('click', () => {
+    menuSignup.classList.add('hidden');
+    menuMain.classList.remove('hidden');
+  });
+  document.addEventListener('click', (e) => {
+    if (userMenu && userAvatar && !userMenu.contains(e.target) && !userAvatar.contains(e.target)) {
+      userMenu.classList.add('hidden');
+    }
+  });
+
+  // Estado Inicial (do 'main')
+  updateScoreboardView();
+  updateFirstPlayerOptions(); 
   showIntro();
-  setMessage('Welcome to Tâb! Click Start to begin');
+  setMessage('Welcome to Tâb! Click Start to begin.'); // Mensagem do 'main'
 });

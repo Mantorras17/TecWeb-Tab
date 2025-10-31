@@ -41,6 +41,11 @@
                 <div id="configurations-logo">Configurations</div>
                 <div id="sidePanel-configs">
                     <div id="configurations">
+                        <label for="game-mode">Game Mode:</label>
+                        <select id="game-mode">
+                            <option value="pvc">Player vs. CPU</option>
+                            <option value="pvp">Player vs. Player</option>
+                        </select>
                         <label for="board-size">Board Size:</label>
                         <select id="board-size">
                             <option value="7">7</option>
@@ -155,7 +160,17 @@
     <!-- Botão fixo para abrir o scoreboard -->
     <button id="scoreboard-btn" aria-label="Open scoreboard">🏆</button>
     </div>
+    <div id="modal-overlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-box">
+            <h3 id="modal-title">Confirmar Ação</h3>
+            <p id="modal-text">Tem a certeza?</p>
+            <div id="modal-buttons">
+                <button id="modal-cancel" class="modal-btn">Cancelar</button>
+                <button id="modal-confirm" class="modal-btn confirm">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
     <script src="tab.js"></script>
 </body>
-
 </html>

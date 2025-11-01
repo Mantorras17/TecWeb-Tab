@@ -788,7 +788,7 @@ function hardShowScoreboard() {
   // --- MERGE: `renderSticks` (do 'HEAD', para animação) ---
   function renderSticks(valueOrResult, opts = {}) {
     if (!sticksEl) return;
-    // ✅ ensure the sticks area is visible whenever we render
+    // ensure the sticks area is visible whenever we render
     sticksEl.classList.remove('hidden');
     sticksEl.style.display = '';
     const force = opts.force === true;
@@ -1073,7 +1073,6 @@ function hardShowScoreboard() {
     setTimeout(run, TIMING.cpuStartMs); // delay before CPU starts its roll
   }
   
-
   if (boardEl) {
     boardEl.addEventListener('click', (e) => {
       if (!game || game.over) return;
@@ -1131,7 +1130,8 @@ function hardShowScoreboard() {
             } else {
               if (game.isVsPlayer) {
                 const P1_name = game.players[0].name;
-                setMessage(`${nextPlayer.name === P1_name ? 'Player 1' : 'Player 2'}, your turn!`);              }
+                setMessage(`${nextPlayer.name === P1_name ? 'Player 1' : 'Player 2'}, your turn!`);          
+              }
             }
           }
         }

@@ -137,6 +137,13 @@
     transform: scale(1.05);
   }
   
+  /* make the close button visibly disabled and unclickable */
+  #closePanel:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
 
 /* Headings / labels inside the glass panel */
 #configurations-logo {
@@ -716,10 +723,10 @@
     height: 30vh;
     background: rgba(114, 111, 109, 0.8);
     display: flex;
-    justify-content: center;
-    align-items: flex-end;
     transition: bottom 0.4s ease-in-out;
     z-index: 500;
+    display: flex;
+    justify-content: center;   /* horizontal: left | center | right */
 }
 
 #scoreboard-panel.open {
@@ -743,7 +750,7 @@
   box-shadow: none !important;
   border-radius: 0 !important;
   width: min(92vw, 900px);
-  padding: 0 0 120px !important;   /* só um respiro em baixo */
+  padding: 20px 0 0px !important;   /* só um respiro em baixo */
   position: relative;
   transform: translatex(-74px)
 }
@@ -845,7 +852,7 @@ border-bottom: 1px solid rgba(255,255,255,0.25);
 padding: 10px 12px;
 text-align: center;
 color: #3b2b22;
-background: rgba(196, 112, 39, 0.6);
+background: rgba(186, 155, 128, 0.6);
 border-bottom: 1px solid rgba(60,40,30,0.12);
 }
 
@@ -886,7 +893,7 @@ background: rgba(255,229,213,0.6);   /* subtle amber hover */
     background: rgba(255, 255, 255, 0.45);
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 24px;
-    padding: 40px 36px;
+    padding: 2px 36px;
     text-align: center;
     box-shadow:
       0 4px 22px rgba(0, 0, 0, 0.12),
@@ -901,10 +908,10 @@ background: rgba(255,229,213,0.6);   /* subtle amber hover */
     font-family: "Devonshire", cursive;
     font-weight: 400;
     font-style: normal;
-    font-size: clamp(3em, 8vw, 7em);
+    font-size: clamp(4em, 10vw, 9em);
     letter-spacing: 0.05em;
     text-align: center;
-    margin: 12px 0 32px;
+    margin: 20px 0 32px 10px;
   
     /* NEW styles for white text with black border */
     color: #4c3629;
@@ -912,19 +919,12 @@ background: rgba(255,229,213,0.6);   /* subtle amber hover */
     text-shadow:
       2px 2px 2px rgba(0,0,0,0.5),
       -2px -2px 2px rgba(0,0,0,0.5); /* fallback soft edge */
-      margin-bottom: 40px; /* creates room for the message bar */
   }
   
-  .intro-tagline {
-    margin: 0 0 24px 0;
-    color: #3b2b22;
-    font-size: 1.05rem;
-    opacity: 0.9;
-  }
   
   .intro-start-btn {
-    font-size: 1.1rem;
-    padding: 12px 24px;
+    font-size: 1.2rem;
+    padding: 16px 32px;
     border-radius: 999px;
     border: none;
     background: rgba(60, 40, 30, 0.8);
@@ -932,17 +932,16 @@ background: rgba(255,229,213,0.6);   /* subtle amber hover */
     cursor: pointer;
     transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    transform: translateY(-25px);
   }
   
   .intro-start-btn:hover {
-    transform: translateY(-1px);
-    opacity: 0.9;
+    opacity: 0.8;
   }
   
 
 .intro-start-btn:active {
-    transform: translateY(0);
-    opacity: 0.9;
+    opacity: 0.8;
 }
 
 
@@ -1059,7 +1058,7 @@ background: rgba(255,229,213,0.6);   /* subtle amber hover */
 #user-avatar {
   display: flex;
   align-items: center;
-  background: #4c3629;
+  background: rgba(76, 54, 41, 0.65);
   color: #fff;
   border: 1px solid rgba(255,255,255,0.4);
   padding: 10px 16px;
@@ -1094,13 +1093,13 @@ background: rgba(255,229,213,0.6);   /* subtle amber hover */
   position: absolute;
   top: 45px;
   right: 0;
-  background: #4c3629;;
+  background: rgba(76, 54, 41, 0.65);
   border: 1px solid rgba(255,255,255,0.2);
   border-radius: 12px;
   padding: 16px;
-  min-width: 200px;
+  min-width: 180px;
   max-width: 400px;
-  min-height: 100px;
+  min-height: 140px;
   max-height: 300px;
   display: flex;
   flex-direction: column;
@@ -1110,6 +1109,7 @@ background: rgba(255,229,213,0.6);   /* subtle amber hover */
   z-index: 400;
   backdrop-filter: blur(8px);
 }
+
 
 #user-menu.hidden {
   display: none;
@@ -1140,6 +1140,80 @@ background: rgba(255,229,213,0.6);   /* subtle amber hover */
   background:  rgba(255,255,255,0.35)
 }
 
+/* 1) Keep the first screen (Login / Sign up choices) compact */
+#user-menu .menu-screen:first-of-type{
+  
+  font-size: 0.1rem;
+  padding: 0px 0px;
+  gap: 20px;
+}
+
+/* 🔹 Make buttons in the FIRST menu (Login / Sign Up) larger */
+#user-menu .menu-screen:first-of-type .user-btn {
+  font-size: 0.95rem;        /* bigger text */
+  border-radius: 10px;      /* smoother corners */
+  align-self: center;   /* centers inside the column */
+  width: 60%;          /* makes both buttons span full width */
+}
+
+
+/* 2) Make the SECOND screen (the form) much bigger */
+#user-menu .menu-screen:nth-of-type(2){
+  font-size: 1.2rem;        /* overall text bigger */
+  padding: 10px 10px;       /* roomier */
+  gap: 14px;
+}
+
+/* Title inside the second screen */
+#user-menu .menu-screen:nth-of-type(2) h3{
+  font-size: 1.7rem;
+  font-weight: 800;
+  margin: 0 0 6px;
+}
+
+/* Inputs and buttons in the second screen */
+#user-menu .menu-screen:nth-of-type(2) input{
+  height: 44px;
+  font-size: 1.05rem;
+  color: #fff; 
+
+}
+
+#user-menu .menu-screen:nth-of-type(2) .user-btn{
+  padding: 12px 16px;
+  font-size: 1.06rem;
+  border-radius: 10px;
+  color: #fff; 
+
+}
+#user-menu .menu-screen:nth-of-type(3){
+  font-size: 1.2rem;        /* overall text bigger */
+  padding: 10px 10px;       /* roomier */
+  gap: 14px;
+}
+
+/* Title inside the second screen */
+#user-menu .menu-screen:nth-of-type(3) h3{
+  font-size: 1.7rem;
+  font-weight: 800;
+  margin: 0 0 6px;
+}
+
+/* Inputs and buttons in the second screen */
+#user-menu .menu-screen:nth-of-type(3) input{
+  height: 44px;
+  font-size: 1.05rem;
+  color: #fff; 
+
+}
+
+#user-menu .menu-screen:nth-of-type(3) .user-btn{
+  padding: 12px 16px;
+  font-size: 1.06rem;
+  border-radius: 10px;
+  color: #fff; 
+
+}
 
 .menu-actions {
   display: flex;
@@ -1148,12 +1222,40 @@ background: rgba(255,229,213,0.6);   /* subtle amber hover */
 }
 
 #user-menu input {
-  padding: 6px 10px;
   border-radius: 6px;
   border: 1px solid #888;
   background: rgba(255,255,255,0.1);
   color: #fff;
 }
+
+/* Optional: placeholder color (the faded hint text) */
+#user-menu input::placeholder {
+  color: rgba(255, 255, 255, 0.7); /* slightly dimmer white */
+}
+
+
+/* Shrink the dropdown box a bit */
+#user-menu {
+  min-width: 180px;          /* narrower overall */
+  padding: 10px 8px;         /* tighter left/right padding */
+}
+
+/* First menu: stop stretching children across the full width */
+#user-menu .menu-screen:first-of-type {
+  align-items: center;        /* was stretch; center keeps content compact */
+  padding: 8px 8px;           /* trim inner sides */
+  max-width: 220px;           /* hard cap so the sides aren’t huge */
+}
+
+/* First menu buttons: don’t fill the width */
+#user-menu .menu-screen:first-of-type .user-btn {
+  width: 80%;              /* was 100%; smaller width */
+  height:60%;
+  align-self: center;         /* keep them centered */
+  padding: 12px 18px;         /* comfy but not too wide */
+}
+
+
 
 /* Destaque das casas destino possíveis */
 .board-cell.highlight {

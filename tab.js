@@ -599,7 +599,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let scores = {
     player1: { wins: 0, losses: 0, name: 'Player 1' },
     player2: { wins: 0, losses: 0, name: 'Player 2' },
-    cpu:     { wins: 0, losses: 0, name: 'CPU' }
+    cpu:     { wins: 0, losses: 0, name: 'Computer' }
   };
 
   // --- MERGE: Variáveis de ambos os 'branches' ---
@@ -628,6 +628,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const scoreboardBody = document.getElementById('scoreboard-body'); // Do 'main'
   const noScoresMsg = document.getElementById('no-scores-msg'); // Do 'main'
   const sticksUI = { busy: false, queue: [] }; // Do 'HEAD' (animação)
+
+    // --- Close button blocker ---
+  function setCloseBlocked(block) {
+    if (!closePanelBtn) return;
+    closePanelBtn.disabled = !!block;
+    closePanelBtn.setAttribute('aria-disabled', String(!!block));
+  }
+
   // === Global timing (slower pacing) ===
   const TIMING = {
     // Sticks flip animation + any code that waits for that reveal
@@ -650,6 +658,27 @@ document.addEventListener('DOMContentLoaded', () => {
   function sticksToGrey(delayMs = 0) {
     setTimeout(() => renderSticks(null, { force: true, animate: false }), delayMs);
   }
+
+  function closeScoreboardPanelIfOpen() {
+    if (!scoreboardPanel) return;
+    scoreboardPanel.classList.remove('open');
+    if (scoreboardBtn) scoreboardBtn.innerHTML = '🏆';
+  }
+  
+  // put near your other helpers
+function hardHideScoreboard() {
+  if (!scoreboardPanel || !scoreboardBtn) return;
+  scoreboardPanel.classList.remove('open');   // ensure closed
+  scoreboardPanel.style.display = 'none';     // fully remove from layout/visibility
+  scoreboardPanel.setAttribute('aria-hidden', 'true');
+  scoreboardBtn.innerHTML = '🏆';
+}
+function hardShowScoreboard() {
+  if (!scoreboardPanel) return;
+  scoreboardPanel.style.display = '';         // bring it back when the game UI is visible
+  scoreboardPanel.removeAttribute('aria-hidden');
+}
+
 
   // --- Helpers do 'HEAD' (animação) ---
   function hide(el){ if(el){ el.classList.add('hidden'); el.style.display = 'none'; } }
@@ -729,7 +758,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       options = [
         { value: 'player1', text: 'Player 1' },
-        { value: 'cpu', text: 'CPU' }
+        { value: 'cpu', text: 'Computer' }
       ];
     }
     options.forEach(opt => {
@@ -753,7 +782,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- MERGE: `renderSticks` (do 'HEAD', para animação) ---
   function renderSticks(valueOrResult, opts = {}) {
     if (!sticksEl) return;
-
+    // ✅ ensure the sticks area is visible whenever we render
+    sticksEl.classList.remove('hidden');
+    sticksEl.style.display = '';
     const force = opts.force === true;
     const animate = opts.animate !== false;
 
@@ -1122,6 +1153,9 @@ document.addEventListener('DOMContentLoaded', () => {
       modeScreen.style.display = 'none';
     }
     if (mainGrid) mainGrid.style.display = 'none';
+    hide(menuBtn);
+    hide(scoreboardBtn);
+    hardHideScoreboard(); 
     hide(rollBtn); // UI do 'HEAD'
   }
   function showMode() {
@@ -1152,7 +1186,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (mainGrid) {
       mainGrid.style.display = 'grid';
     }
-    hide(rollBtn);
+  
+    show(menuBtn);    
+    hide(rollBtn)
   }
 
   // Scoreboard a 3 (do 'main')
@@ -1170,7 +1206,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const stats = [
       { name: 'Player 1', ...scores.player1 },
       { name: 'Player 2', ...scores.player2 },
-      { name: 'CPU', ...scores.cpu }
+      { name: 'Computer', ...scores.cpu }
     ];
     stats.sort((a, b) => b.wins - a.wins);
     const getRatio = (wins, losses) => {
@@ -1192,23 +1228,74 @@ document.addEventListener('DOMContentLoaded', () => {
   // handleGameOver a 3 (do 'main')
   function handleGameOver(winner) {
     if (!winner) return;
+
+    // === Update scores first ===
     const winnerName = winner.name;
     const loserPlayer = (winner === game.players[0]) ? game.players[1] : game.players[0];
     const loserName = loserPlayer.name;
 
     if (scores[winnerName]) scores[winnerName].wins++;
     if (scores[loserName]) scores[loserName].losses++;
-    
     updateScoreboardView();
 
+    // === Announce winner ===
     let winnerDisplay = winnerName.toUpperCase();
     if (winnerName === 'player1') winnerDisplay = 'Player 1';
     if (winnerName === 'player2') winnerDisplay = 'Player 2';
+    msgAfterFlip(`Game Over! ${winnerDisplay} won!`);
 
-    msgAfterFlip(`Game Over! ${winnerDisplay} won!`); // UI do 'HEAD'
-    if (rollBtn) rollBtn.disabled = true;
-    if (boardEl) boardEl.classList.add('disabled-board');
+    // === Disable current board interactions ===
+    rollBtn && (rollBtn.disabled = true);
+    boardEl && boardEl.classList.add('disabled-board');
+    // === 🟢 Hide sticks completely on game over ===
+    if (sticksEl) {
+      sticksEl.innerHTML = '';
+      sticksEl.classList.add('hidden');
+      sticksEl.style.display = 'none';
+    } hide && hide(sticksEl);
+    
+    // === OPEN the scoreboard panel right away ===
+    if (scoreboardPanel) {
+      scoreboardPanel.classList.add('open');
+      if (scoreboardBtn) scoreboardBtn.innerHTML = '&times;';
+      setTimeout(() => scoreboardPanel.focus(), 100);
+    }
+
+    // === After a short pause, RESET to "pre-start" state (main grid + sidepanel open) ===
+    const CLEANUP_DELAY = 2200; // tweak as you like
+    setTimeout(() => {
+      // clear timers
+      if (cpuTimer) { clearTimeout(cpuTimer); cpuTimer = null; }
+      if (messageTimer) { clearTimeout(messageTimer); messageTimer = null; }
+
+      // forget current game
+      window.game = null;
+      game = null;
+
+      // nuke board and hide roll button
+      if (boardEl) boardEl.innerHTML = '';
+      hide && hide(rollBtn);
+      hide && hide(sticksEl); // hide sticks area again
+      // show the main game layout (not the intro) and open the side panel
+      showGame && showGame();           // keeps main grid visible
+      openSidePanel && openSidePanel(); // opens the config panel
+
+      // rebuild empty board grid so it’s visible again
+      buildBoard && buildBoard();
+      updateBoardHighlights && updateBoardHighlights();
+
+      // prompt like the intro’s Start flow
+      setMessage('Choose the configurations and click "Start" to play the game.');
+      setCloseBlocked(true); // ⬅️ block again in the post-game pre-start state
+      
+      // keep scoreboard panel open (already opened above on game over)
+      if (scoreboardPanel) {
+        scoreboardPanel.classList.add('open');
+        if (scoreboardBtn) scoreboardBtn.innerHTML = '&times;';
+      }
+    }, CLEANUP_DELAY);
   }
+
 
   // checkGameOver (global, do 'main')
   function checkGameOver() {
@@ -1247,73 +1334,88 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Botões de navegação (lógica do 'main')
   introStartBtn?.addEventListener('click', () => {
     showGame();
     openSidePanel();
     setMessage('Choose the configurations and click "Start" to play the game!');
+    show(menuBtn);
+    show(scoreboardBtn);
+    setCloseBlocked(true); // ⬅️ block close while choosing configs
   });
-  
-  // --- MERGE: `startSideBtn` (lógica do 'main', UI do 'HEAD') ---
-  if (startSideBtn) {
-    startSideBtn.addEventListener('click', async () => {
-      if (window.game) {
-        const confirmed = await showModal(
-          'New game?',
-          'Starting a new game will cancel the current one. Are you sure?',
-          'Yes, Start New',
-          'No, Cancel'
-        );
-        if (!confirmed) return;
-      }
-      const gameMode = gameModeInput?.value || 'pvc';
-      const cols = sizeInput ? parseInt(sizeInput.value, 10) || 9 : 9;
-      const firstPlayer = firstPlayerInput ? firstPlayerInput.value : 'player1';
-      const difficulty = difficultyInput ? difficultyInput.value : 'easy';
 
-      game = new TabGame(cols);
-      window.game = game;
-      game.isVsPlayer = (gameMode === 'pvp');
+// --- MERGE: `startSideBtn` (lógica do 'main', UI do 'HEAD') ---
+if (startSideBtn) {
+  startSideBtn.addEventListener('click', async () => {
+    if (window.game) {
+      const confirmed = await showModal(
+        'New game?',
+        'Starting a new game will cancel the current one. Are you sure?',
+        'Yes, Start New',
+        'No, Cancel'
+      );
+      if (!confirmed) return;
+    }
+    const gameMode = gameModeInput?.value || 'pvc';
+    const cols = sizeInput ? parseInt(sizeInput.value, 10) || 9 : 9;
+    const firstPlayer = firstPlayerInput ? firstPlayerInput.value : 'player1';
+    const difficulty = difficultyInput ? difficultyInput.value : 'easy';
 
-      game.players[0].name = 'player1';
-      if (game.isVsPlayer) {
-        game.players[1].name = 'player2';
-      } else {
-        game.players[1].name = 'cpu';
-        game.difficultyLevel = ({easy: 0, medium: 1, hard: 2}[difficulty]) ?? 0;
-      }
+    game = new TabGame(cols);
+    window.game = game;
 
-      if (firstPlayer === 'cpu' || firstPlayer === 'player2') {
-        game.curPlayerIdx = 1;
-      } else {
-        game.curPlayerIdx = 0;
-      }
-      
-      if (cpuTimer) { clearTimeout(cpuTimer); cpuTimer = null; }
-      if (messageTimer) { clearTimeout(messageTimer); messageTimer = null; }
-      cpuBusy = false;
-      cpuRolledOnce = false;
-      
-      // UI do 'HEAD' (substitui 'renderAll()')
-      show(rollBtn);
-      updateRollBtn();
-      renderSticks(null); // Mostra sticks cinzentos
-      buildBoard(); // Precisamos de desenhar o tabuleiro
-      updateBoardHighlights(); // e highlights
-      
-      closeSidePanel();
+    // ✅ re-enable the close button as soon as the user starts the game
+    setCloseBlocked(false); // ⬅️ INSERT THIS LINE HERE
 
-      const currentPlayer = game.getCurrentPlayer();
-      if (currentPlayer.name === 'cpu') {
-        setMessage('Game started. Player 2 plays first!');
-        setTimeout(maybeCpuTurn, TIMING.cpuStartMs);
-      } else if (currentPlayer.name === 'player1') {
-        setMessage('Game started. Player 1, your turn!');
-      } else if (currentPlayer.name === 'player2') {
-        setMessage('Game started. Player 2, your turn!');
-      }
-    });
-  }
+    game.isVsPlayer = (gameMode === 'pvp');
+
+    game.players[0].name = 'player1';
+    if (game.isVsPlayer) {
+      game.players[1].name = 'player2';
+    } else {
+      game.players[1].name = 'cpu';
+      game.difficultyLevel = ({easy: 0, medium: 1, hard: 2}[difficulty]) ?? 0;
+    }
+
+    if (firstPlayer === 'cpu' || firstPlayer === 'player2') {
+      game.curPlayerIdx = 1;
+    } else {
+      game.curPlayerIdx = 0;
+    }
+    
+    if (cpuTimer) { clearTimeout(cpuTimer); cpuTimer = null; }
+    if (messageTimer) { clearTimeout(messageTimer); messageTimer = null; }
+    cpuBusy = false;
+    cpuRolledOnce = false;
+    
+    // UI do 'HEAD' (substitui 'renderAll()')
+    show(rollBtn);
+    updateRollBtn();
+    hardShowScoreboard();
+    // make sure sticks area is visible again
+    if (sticksEl) {
+      sticksEl.classList.remove('hidden');
+      sticksEl.style.display = '';
+    }
+
+    renderSticks(null); // Mostra sticks cinzentos
+    buildBoard(); // Precisamos de desenhar o tabuleiro
+    updateBoardHighlights(); // e highlights
+    
+    closeSidePanel();
+    // ✅ close the scoreboard if it was open
+    closeScoreboardPanelIfOpen();
+    const currentPlayer = game.getCurrentPlayer();
+    if (currentPlayer.name === 'cpu') {
+      setMessage('Game started. Player 2 plays first!');
+      setTimeout(maybeCpuTurn, TIMING.cpuStartMs);
+    } else if (currentPlayer.name === 'player1') {
+      setMessage('Game started. Player 1, your turn!');
+    } else if (currentPlayer.name === 'player2') {
+      setMessage('Game started. Player 2, your turn!');
+    }
+  });
+}
+
   
   closePanelBtn?.addEventListener('click', closeSidePanel);
 
@@ -1432,11 +1534,12 @@ document.addEventListener('DOMContentLoaded', () => {
       
       setMessage(quitMessage);
       closeSidePanel();
-      
+      hardHideScoreboard();    
       // 'setTimeout' do 'main' (é útil)
       setTimeout(() => {
         if (!window.game) {
           setMessage('Choose the configurations and click "Start" to play the game');
+          setCloseBlocked(true); // ⬅️ block while waiting to start again
         }
       }, 3000); 
     });

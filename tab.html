@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tâb Game</title>
+    <link rel="stylesheet" href="tab.css">
+    <link href="https://fonts.googleapis.com/css2?family=Devonshire&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Intro / Landing Screen -->
+    <div id="intro-screen" role="dialog" aria-modal="true">
+        <div class="intro-card">
+            <div class="intro-logo">TÂB</div>
+            <button id="intro-start" class="intro-start-btn" aria-label="Start Tâb">Start</button>
+        </div>
+    </div>
+    <!-- Mode Selection Screen -->
+    <div id="mode-screen" hidden aria-hidden="true">
+        <div class="mode-card">
+            <div class="mode-logo">Choose Game Mode</div>
+            <div class="mode-buttons">
+                <button class="mode-btn" id="mode-single">Single Player</button>
+                <button class="mode-btn" id="mode-multi">Multiplayer (Local)</button>
+                <button class="mode-btn" id="mode-cpu">Player vs CPU</button>
+                <button class="mode-btn" id="mode-back">← Back</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- App (your current UI) -->
+    <button type="button" id="menu-btn" aria-label="Open menu">&#9776;</button>
+    <div id="main-grid">
+        <div id="sidePanel-scrim"></div>
+        <aside id="sidePanel" tabindex="-1">
+            <div id="sidePanel-content">
+                <button id="closePanel" aria-label="Close menu">&times;</button>
+                <div id="configurations-logo">Configurations</div>
+                <div id="sidePanel-configs">
+                    <div id="configurations">
+                        <label for="game-mode">Game Mode:</label>
+                        <select id="game-mode">
+                            <option value="pvc">Player vs. Computer</option>
+                            <option value="pvp">Player vs. Player</option>
+                        </select>
+                        <label for="board-size">Board Size:</label>
+                        <select id="board-size">
+                            <option value="7">7</option>
+                            <option value="9" selected>9</option>
+                            <option value="11">11</option>
+                            <option value="13">13</option>
+                            <option value="15">15</option>
+                        </select>
+                        <label for="first-player">First Player:</label>
+                        <select id="first-player">
+                            <option value="player">Player</option>
+                            <option value="cpu">CPU</option>
+                        </select>
+                        <label for="difficulty">Difficulty:</label>
+                        <select id="difficulty">
+                            <option value="easy">Easy</option>
+                            <option value="medium">Medium</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </div>
+                    <div id="controls">
+                        <button id="start-game">Start</button>
+                        <button id="quit-game">Quit</button>
+                        <button id="show-instructions">Instructions</button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        <header id="header">
+            <div id="logo-wrapper">
+                <div id="logo">TÂB</div>
+                </div>
+            </header>
+        <div id="login-area">
+            <div id="identification">
+                <div id="user-avatar">
+                    <img src="https://cdn-icons-png.flaticon.com/512/847/847969.png" alt="User Icon">
+                    <span id="user-id">Guest</span>
+                </div>
+
+                <div id="user-menu" class="hidden">
+                    <div class="menu-screen" id="menu-main">
+                        <button class="user-btn" id="btn-login">Login</button>
+                        <button class="user-btn" id="btn-signup">Sign Up</button>
+                    </div>
+
+                    <div class="menu-screen hidden" id="menu-login">
+                        <h3>Login</h3>
+                        <input type="text" placeholder="Username" id="login-user">
+                        <input type="password" placeholder="Password" id="login-pass">
+                        <div class="menu-actions">
+                            <button class="user-btn confirm">Enter</button>
+                            <button class="user-btn back-btn">← Back</button>
+                        </div>
+                    </div>
+
+                    <div class="menu-screen hidden" id="menu-signup">
+                        <h3>Sign Up</h3>
+                        <input type="text" placeholder="New Username" id="signup-user">
+                        <input type="password" placeholder="Password" id="signup-pass">
+                        <div class="menu-actions">
+                            <button class="user-btn confirm">Create</button>
+                            <button class="user-btn back-btn">← Back</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="messages">
+            <div class="msg-box">
+              <button id="open-sidepanel" class="intro-start-btn">Open Menu</button>
+            </div>
+          </div>          
+        <main id="main-content">
+            <div id="board"></div>
+        </main>
+        <aside id="sticks-area">
+            <div id="dice-of-sticks">
+                <button id="throw-sticks" class="btn-primary">Throw Sticks</button>
+                <div id="sticks-result"></div>
+            </div>
+        </aside>
+        <div id="instructions" style="display:none;">
+            <button id="close-instructions">Close</button>
+            <div id="instructions-content"></div>
+        </div>
+    </div>
+    <div id="scoreboard-panel">
+        <div class="scoreboard-container">
+            <h2 id="scoreboard-title">ScoreBoard</h2>
+
+            <div id="leaderboard-content">
+                <div class="leaderboard-panel" id="leaderboard-local">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Name</th>
+                                <th>Wins</th>
+                                <th>Losses</th>
+                                <th>Win/Loss Ratio</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scoreboard-body">
+                            <!-- vazio até o primeiro jogo -->
+                        </tbody>
+                    </table>
+                    <p id="no-scores-msg">No games played yet.</p>
+                </div>
+            </div>
+        </div>
+    <!-- Botão fixo para abrir o scoreboard -->
+    <button id="scoreboard-btn" aria-label="Open scoreboard">🏆</button>
+    </div>
+    <div id="modal-overlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-box">
+            <h3 id="modal-title">Confirmar Ação</h3>
+            <p id="modal-text">Tem a certeza?</p>
+            <div id="modal-buttons">
+                <button id="modal-cancel" class="modal-btn">Cancelar</button>
+                <button id="modal-confirm" class="modal-btn confirm">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="tab.js"></script>
+</body>
+</html>

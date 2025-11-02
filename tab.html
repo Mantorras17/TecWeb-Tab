@@ -127,9 +127,111 @@
                 <div id="sticks-result"></div>
             </div>
         </aside>
-        <div id="instructions" style="display:none;">
-            <button id="close-instructions">Close</button>
-            <div id="instructions-content"></div>
+        <!-- Scrim behind the instructions -->
+        <div id="instructions-scrim" class="hidden" aria-hidden="true"></div>
+
+        <!-- Glass Instructions modal -->
+        <div id="instructions" role="dialog" aria-modal="true" aria-labelledby="ins-title" aria-hidden="true">
+        <div class="ins-header">
+            <h2 id="ins-title" class="ins-title">Instructions</h2>
+            <button type="button" class="btn-ghost ins-close">Close</button>
+        </div>
+
+        <div class="ins-body" id="instructions-content" role="group" aria-label="Instructions pages">
+            <div class="ins-pages" id="ins-pages">
+            <!-- Page 1 -->
+            <section class="ins-page" data-page="1" aria-labelledby="ins-h1">
+                <div class="ins-layout">
+                <!-- Left: text -->
+                <div class="ins-text">
+                    <h3 id="ins-h1">Objective</h3>
+                    <p>Capture all opponent pieces. Moves are determined by throwing the four sticks.</p>
+            
+                    <p>Each stick has two sides: <b>bright side</b> and <b>dark side</b>.</p>            
+                    <p>After throwing, count how many bright sides are facing up.
+                    That number is your <b>move value</b> (1–4, or 6 if all are dark).</p>
+            
+                    <ul>
+                    <li>1, 4, or 6 → <b>Play again</b> after your move.</li>
+                    <li>2 or 3 → Turn passes to your opponent.</li>
+                    </ul>
+                </div>
+            
+                <!-- Right: sticks (matches game visuals) -->
+                <aside class="ins-illustration" aria-label="Stick sides examples">
+                    <div class="stick-strip">
+                    <!-- Use the SAME image asset and classes you use in-game -->
+                    <!-- Example layout: two bright + two dark; swap as you like -->
+                    <img class="stick-img light active" src="light.jpg" alt="Bright flat side">
+                    <img class="stick-img dark active"  src="dark.jpeg" alt="Dark rounded side">
+                    <img class="stick-img light active" src="light.jpg" alt="Bright flat side">
+                    <img class="stick-img dark active"  src="dark.jpeg" alt="Dark rounded side">
+                    </div>
+                    <div class="sticks-label" >Example: 2 bright → value 2</div>
+                </aside>
+                </div>
+            </section>
+            <!-- Page 2 -->
+            <section class="ins-page" data-page="2" aria-labelledby="ins-h2">
+                <div class="ins-layout">
+                <!-- Left: text -->
+                <div class="ins-text">
+                    <h3 id="ins-h2">Your Turn</h3>
+                    <ol>
+                    <li>Press <b>Throw Sticks</b>.</li>
+                    <li>Select one of your pieces with highlights.</li>
+                    <li>Click a highlighted destination to move.</li>
+                    </ol>
+                    <p>First move for each piece usually requires a <b>1</b>.</p>
+                </div>
+            
+                <!-- Right: illustration -->
+                <aside class="ins-illustration">
+                    <img
+                    src="move_piece.png"
+                    alt="Example showing a player selecting a highlighted piece and destination"
+                    class="ins-img"
+                    />
+                </aside>
+                </div>
+            </section>
+            <!-- Page 3 -->
+            <section class="ins-page" data-page="3" aria-labelledby="ins-h3">
+                <div class="ins-layout">
+                <!-- Left: text -->
+                <div class="ins-text">
+                    <h3 id="ins-h3">Captures & Rows</h3>
+                    <ul>
+                    <li>Landing on an opponent captures it.</li>
+                    <li>You can’t re-enter your own start row.</li>
+                    <li>The last row becomes available only after all your pieces have left the start row.</li>
+                    </ul>
+                </div>
+            
+                <!-- Right: illustration -->
+                <aside class="ins-illustration">
+                    <img
+                    src="capture.png"
+                    alt="Example of capturing an opponent and reaching the last row"
+                    class="ins-img"
+                    />
+                </aside>
+                </div>
+            </section>
+            
+            </div>
+          </div>
+          
+          <div class="ins-footer">
+            <div class="ins-nav">
+              <button type="button" id="ins-prev" class="btn-ghost" aria-label="Previous page">← Prev</button>
+              <span id="ins-counter" class="ins-counter">Page 1 of 3</span>
+              <button type="button" id="ins-next" class="btn-primary" aria-label="Next page">Next →</button>
+            </div>
+          </div>
+          
+          
+          
         </div>
     </div>
     <div id="scoreboard-panel">

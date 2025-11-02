@@ -1546,12 +1546,158 @@ if (startSideBtn) {
   }
 
   // Instruções (lógica de ambos)
-  if (instrOpen && instrPanel) {
-    instrOpen.addEventListener('click', () => { instrPanel.style.display = 'block'; });
+  const instrScrim = document.getElementById('instructions-scrim');
+
+  function openInstructions() {
+    if (!instrPanel || !instrScrim) return;
+  
+    // ensure pages exist, then reset to page 1 (index 0)
+    if (!insPages.length) collectPages();
+    goToPage(0);
+  
+    instrPanel.classList.add('open');
+    instrPanel.setAttribute('aria-hidden', 'false');
+    instrScrim.classList.add('visible');
+    document.body.classList.add('instructions-open');
   }
-  if (instrClose && instrPanel) {
-    instrClose.addEventListener('click', () => { instrPanel.style.display = 'none'; });
+  
+  function closeInstructions() {
+    if (!instrPanel || !instrScrim) return;
+    instrPanel.classList.remove('open');
+    instrPanel.setAttribute('aria-hidden', 'true');
+    instrScrim.classList.remove('visible');
+    document.body.classList.remove('instructions-open');
   }
+  
+  // Open via button
+  instrOpen?.addEventListener('click', openInstructions);
+  
+  // Close via any .ins-close button
+  instrPanel?.addEventListener('click', (e) => {
+    if (e.target.closest('.ins-close')) closeInstructions();
+  });
+  
+  // Close via scrim click
+  instrScrim?.addEventListener('click', closeInstructions);
+  
+  // Close via ESC
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && instrPanel?.classList.contains('open')) {
+      closeInstructions();
+    }
+  });
+
+  // ---------- Multi-page Instructions ----------
+const insPagesWrap = document.getElementById('ins-pages');
+const insCounter   = document.getElementById('ins-counter');
+const insDotsWrap  = document.getElementById('ins-dots');
+const insPrev      = document.getElementById('ins-prev');
+const insNext      = document.getElementById('ins-next');
+
+let insPages = [];
+let insIndex = 0; // 0-based
+
+function collectPages() {
+  insPages = Array.from(insPagesWrap?.querySelectorAll('.ins-page') || []);
+  // ensure only first is visible by default
+  insPages.forEach((p, i) => p.toggleAttribute('hidden', i !== 0));
+  insIndex = 0;
+  buildDots();
+  updatePager();
+}
+
+function buildDots() {
+  if (!insDotsWrap) return;
+  insDotsWrap.innerHTML = '';
+  insPages.forEach((_, i) => {
+    const dot = document.createElement('button');
+    dot.type = 'button';
+    dot.className = 'ins-dot';
+    dot.setAttribute('role', 'tab');
+    dot.setAttribute('aria-label', `Page ${i+1}`);
+    dot.setAttribute('aria-selected', i === insIndex ? 'true' : 'false');
+    dot.addEventListener('click', () => goToPage(i));
+    insDotsWrap.appendChild(dot);
+  });
+}
+
+function updatePager() {
+  const total = insPages.length || 1;
+  const page  = insIndex + 1;
+  if (insCounter) insCounter.textContent = `Page ${page} of ${total}`;
+
+  // show only current
+  insPages.forEach((p, i) => p.toggleAttribute('hidden', i !== insIndex));
+
+  // dots state
+  Array.from(insDotsWrap?.children || []).forEach((dot, i) =>
+    dot.setAttribute('aria-selected', i === insIndex ? 'true' : 'false')
+  );
+
+  // buttons
+  if (insPrev) insPrev.disabled = (insIndex === 0);
+  if (insNext) insNext.disabled = (insIndex === total - 1);
+}
+
+function goToPage(i) {
+  if (!insPages.length) return;
+  insIndex = Math.max(0, Math.min(i, insPages.length - 1));
+  updatePager();
+
+  // focus first heading on the new page (a11y nicety)
+  const firstHeading = insPages[insIndex].querySelector('h1,h2,h3,h4,h5,h6,button,[tabindex]');
+  if (firstHeading) firstHeading.focus({ preventScroll: true });
+}
+
+function nextPage() { goToPage(insIndex + 1); }
+function prevPage() { goToPage(insIndex - 1); }
+
+insPrev?.addEventListener('click', prevPage);
+insNext?.addEventListener('click', nextPage);
+
+// Keyboard support when modal is open
+document.addEventListener('keydown', (e) => {
+  if (!instrPanel?.classList.contains('open')) return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); nextPage(); }
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); prevPage(); }
+  if (e.key === 'Home')       { e.preventDefault(); goToPage(0); }
+  if (e.key === 'End')        { e.preventDefault(); goToPage(insPages.length - 1); }
+});
+
+// Optional: swipe on touch (simple)
+let touchX = null;
+instrPanel?.addEventListener('touchstart', (e) => { touchX = e.touches?.[0]?.clientX ?? null; }, { passive: true });
+instrPanel?.addEventListener('touchend', (e) => {
+  if (touchX == null) return;
+  const dx = (e.changedTouches?.[0]?.clientX ?? touchX) - touchX;
+  if (Math.abs(dx) > 40) { dx < 0 ? nextPage() : prevPage(); }
+  touchX = null;
+}, { passive: true });
+
+// Public helper to replace pages dynamically if you prefer building them via JS
+window.setInstructionsPages = function(htmlArray) {
+  if (!insPagesWrap) return;
+  insPagesWrap.innerHTML = '';
+  htmlArray.forEach((html, i) => {
+    const sec = document.createElement('section');
+    sec.className = 'ins-page';
+    sec.dataset.page = String(i + 1);
+    sec.innerHTML = html;
+    insPagesWrap.appendChild(sec);
+  });
+  collectPages();
+};
+
+// Initialize pages from current markup once DOM is ready
+collectPages();
+
+// Also reset to page 1 any time the modal opens
+const _openInstr = openInstructions;
+openInstructions = function() {
+  _openInstr();
+  goToPage(0);
+};
+
 
   // Side panel (lógica de ambos)
   if (menuBtn && sidePanel) {

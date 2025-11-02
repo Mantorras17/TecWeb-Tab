@@ -580,9 +580,7 @@ class TabGame {
   }
 }
 
-// =================================================================
 // INÍCIO DA LÓGICA DA INTERFACE (UI)
-// =================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
   const sizeInput = document.getElementById('board-size');
@@ -590,10 +588,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Variáveis globais do 'main'
   let game;
   window.game = null;
-  let cpuBusy = false;
-  let cpuRolledOnce = false;
   let cpuTimer = null;
   let messageTimer = null;
+  let lastGameMessageBeforeSettings = null;
 
   // Scoreboard a 3 do 'main'
   let scores = {
@@ -642,13 +639,13 @@ document.addEventListener('DOMContentLoaded', () => {
     flipAnimMs: 1100,        // was 600
 
     // CPU pacing
-    cpuStartMs: 1200,        // was 100 / 2000 (normalize both)
+    cpuStartMs: 500,        // was 100 / 2000 (normalize both)
     cpuThinkMs: 2500,        // was 1600
     cpuAfterPlayMs: 2500,    // was 800/1400/1800 in places (normalize)
     cpuChainMs: 1200,        // was 100
 
     // Human → CPU handoff delay after your move
-    humanToCpuMs: 4000,      // was 1000
+    humanToCpuMs: 1000,      // was 1000
 
     // Messaging tweaks
     skipMsgDelayMs: 1000,    // already 1000, keep
@@ -665,14 +662,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (scoreboardBtn) scoreboardBtn.innerHTML = '🏆';
   }
   
-  // put near your other helpers
-function hardHideScoreboard() {
-  if (!scoreboardPanel || !scoreboardBtn) return;
-  scoreboardPanel.classList.remove('open');   // ensure closed
-  scoreboardPanel.style.display = 'none';     // fully remove from layout/visibility
-  scoreboardPanel.setAttribute('aria-hidden', 'true');
-  scoreboardBtn.innerHTML = '🏆';
-}
 function hardShowScoreboard() {
   if (!scoreboardPanel) return;
   scoreboardPanel.style.display = '';         // bring it back when the game UI is visible
@@ -696,6 +685,23 @@ function hardShowScoreboard() {
   
   function msgAfterFlip(text, delay = 0) {
     queueAfterFlip(() => setMessage(text), delay);
+  }
+
+  /* Controla a rotação do tabuleiro em modo PvP */
+  function updateBoardRotation() {
+    if (!game || !boardEl) return; // Se o jogo não começou, não faz nada
+    
+    // Encontra o .board-box (o elemento que vamos rodar)
+    const boardBox = boardEl.querySelector('.board-box');
+    if (!boardBox) return;
+
+    // Se for PvP E for a vez do Jogador 2...
+    if (game.isVsPlayer && game.curPlayerIdx === 1) {
+      boardBox.classList.add('rotated');
+    } else {
+      // Em todos os outros casos (PvC ou vez do Jogador 1)
+      boardBox.classList.remove('rotated');
+    }
   }
   
   // Helpers do 'main' (lógica)
@@ -730,7 +736,7 @@ function hardShowScoreboard() {
   function openSidePanel() {
     if (!sidePanel || !menuBtn) return;
     sidePanel.classList.add('open');
-    sidePanel.style.width = '360px'; // <-- Do 'HEAD'
+    sidePanel.style.width = 'min(360px, 90vw)';
     menuBtn.innerHTML = '&times;';
     setTimeout(() => sidePanel.focus(), 100);
   }
@@ -758,7 +764,7 @@ function hardShowScoreboard() {
     } else {
       options = [
         { value: 'player1', text: 'Player 1' },
-        { value: 'cpu', text: 'Computer' }
+        { value: 'cpu', text: 'Computer (Player 2)' }
       ];
     }
     options.forEach(opt => {
@@ -782,7 +788,7 @@ function hardShowScoreboard() {
   // --- MERGE: `renderSticks` (do 'HEAD', para animação) ---
   function renderSticks(valueOrResult, opts = {}) {
     if (!sticksEl) return;
-    // ✅ ensure the sticks area is visible whenever we render
+    // ensure the sticks area is visible whenever we render
     sticksEl.classList.remove('hidden');
     sticksEl.style.display = '';
     const force = opts.force === true;
@@ -950,7 +956,6 @@ function hardShowScoreboard() {
     }
   }
 
-  // --- MERGE: `renderAll` (lógica do 'main', UI do 'HEAD') ---
   function renderAll(opts = { updateSticks: true }) {
     if (!window.game) return;
     
@@ -976,18 +981,16 @@ function hardShowScoreboard() {
         boardEl.classList.remove('disabled-board');
       }
     }
+    updateBoardRotation();
   }
 
-  // --- MERGE: `maybeCpuTurn` (lógica do 'main', UI do 'HEAD') ---
-  function maybeCpuTurn() {
+  function maybeCpuTurn(isExtraTurn = false) {
     if (!game || game.over) return;
     const cur = game.getCurrentPlayer();
     if (cur.name !== 'cpu' || game.isVsPlayer) return;
   
     cpuBusy = true;
     queueAfterFlip(updateRollBtn);
-
-    setMessage("Player 2's turn");
 
     // show grey sticks while the message is visible
     renderSticks(null, { force: true, animate: false });
@@ -1003,15 +1006,15 @@ function hardShowScoreboard() {
       const val = game.startTurn();
       queueAfterFlip(updateRollBtn);
   
-      // ✅ Ensure the flip animation runs AFTER any prior tasks,
+      // Ensure the flip animation runs AFTER any prior tasks,
       // and only show "CPU rolled..." AFTER the flip reveal (not grey)
       queueAfterFlip(() => {
         renderSticks({ value: val, sticks: game.lastSticks }, { animate: true });
         renderAll({ updateSticks: false });
-        msgAfterFlip(val === 1 ? `Player 2 got ${val} move` : `Player 2 got ${val} moves`, 0);
+        msgAfterFlip(val === 1 ? `Player 2 got ${val} move.` : `Player 2 got ${val} moves.`, 0);
       });
   
-      // ⬇️ Only start "thinking" AFTER the flip reveal finished
+      // Only start "thinking" AFTER the flip reveal finished
       queueAfterFlip(() => {
         setTimeout(() => {
           const skipped = game.autoSkipIfNoMoves();
@@ -1020,8 +1023,8 @@ function hardShowScoreboard() {
             const nextPlayer = game.getCurrentPlayer();
             const skipMessage =
               (nextPlayer === cur)
-                ? "No possible moves. Throwing sticks again"
-                : "No possible moves. Turn passed";
+                ? "No possible moves. Throwing sticks again."
+                : "No possible moves. Turn passed.";
   
             msgAfterFlip(skipMessage, 0);
   
@@ -1032,7 +1035,7 @@ function hardShowScoreboard() {
   
               if (nextPlayer.name === 'cpu') {
                 // CPU keeps the turn → chain
-                setTimeout(maybeCpuTurn, TIMING.cpuChainMs);
+                setTimeout(maybeCpuTurn(true), TIMING.cpuChainMs);
               } else {
                 // Turn passed to human
                 setTimeout(() => {
@@ -1050,12 +1053,12 @@ function hardShowScoreboard() {
           game.cpuMove();
           renderAll({ updateSticks: false });
           sticksToGrey(0);
-          msgAfterFlip('Player 2 played');
+          msgAfterFlip('Player 2 played.');
   
           // After CPU’s move
           setTimeout(() => {
             if (game.getCurrentPlayer().name === 'cpu') {
-              msgAfterFlip('Player 2 plays again');
+              msgAfterFlip('Player 2 plays again.');
               setTimeout(maybeCpuTurn, TIMING.cpuChainMs);
             } else {
               msgAfterFlip('Your turn, player 1!');
@@ -1070,9 +1073,6 @@ function hardShowScoreboard() {
     setTimeout(run, TIMING.cpuStartMs); // delay before CPU starts its roll
   }
   
-  
-  // --- MERGE: `boardEl` (lógica do 'main', UI do 'HEAD') ---
-  // Esta é a função correta (select-vs-move) do 'main'
   if (boardEl) {
     boardEl.addEventListener('click', (e) => {
       if (!game || game.over) return;
@@ -1086,7 +1086,7 @@ function hardShowScoreboard() {
       const r = +cell.dataset.row;
       const c = +cell.dataset.col;
       if (game.stickValue == null) {
-        setMessage('Throw sticks first!'); // Corrigido
+        setMessage('Throw sticks first!'); 
         return;
       }
       if (messageTimer) {
@@ -1108,17 +1108,17 @@ function hardShowScoreboard() {
         }
         const moveWasSuccessful = game.moveSelectedTo(r, c);
         if (moveWasSuccessful) {
-          // --- Jogada feita ---
-          // MERGE: updateSticks: false (para não estragar animação)
+          // Jogada feita
+          // MERGE: updateSticks
           renderAll({ updateSticks: false }); 
           sticksToGrey(0);
           if (checkGameOver()) return; 
 
           const nextPlayer = game.getCurrentPlayer();
           if (nextPlayer.name === 'cpu' && !game.isVsPlayer) {
-            setMessage("Player 2's turn");
+            setMessage("Player 2's turn.");
             // MERGE: usa queueAfterFlip
-            queueAfterFlip(maybeCpuTurn, TIMING.humanToCpuMs);
+            queueAfterFlip(maybeCpuTurn(false), TIMING.humanToCpuMs);
           } else {
             if (nextPlayer === currentPlayer) {
               if (game.isVsPlayer) {
@@ -1130,7 +1130,7 @@ function hardShowScoreboard() {
             } else {
               if (game.isVsPlayer) {
                 const P1_name = game.players[0].name;
-                setMessage(`${nextPlayer.name === P1_name ? 'Player 1' : 'Player 2'}, your turn!`);
+                setMessage(`${nextPlayer.name === P1_name ? 'Player 1' : 'Player 2'}, your turn!`);          
               }
             }
           }
@@ -1154,8 +1154,6 @@ function hardShowScoreboard() {
     }
     if (mainGrid) mainGrid.style.display = 'none';
     hide(menuBtn);
-    hide(scoreboardBtn);
-    hardHideScoreboard(); 
     hide(rollBtn); // UI do 'HEAD'
   }
   function showMode() {
@@ -1286,7 +1284,7 @@ function hardShowScoreboard() {
 
       // prompt like the intro’s Start flow
       setMessage('Choose the configurations and click "Start" to play the game.');
-      setCloseBlocked(true); // ⬅️ block again in the post-game pre-start state
+      setCloseBlocked(true); // block again in the post-game pre-start state
       
       // keep scoreboard panel open (already opened above on game over)
       if (scoreboardPanel) {
@@ -1343,9 +1341,10 @@ function hardShowScoreboard() {
     setCloseBlocked(true); // ⬅️ block close while choosing configs
   });
 
-// --- MERGE: `startSideBtn` (lógica do 'main', UI do 'HEAD') ---
+
 if (startSideBtn) {
   startSideBtn.addEventListener('click', async () => {
+    lastGameMessageBeforeSettings = null;
     if (window.game) {
       const confirmed = await showModal(
         'New game?',
@@ -1363,8 +1362,8 @@ if (startSideBtn) {
     game = new TabGame(cols);
     window.game = game;
 
-    // ✅ re-enable the close button as soon as the user starts the game
-    setCloseBlocked(false); // ⬅️ INSERT THIS LINE HERE
+    // re-enable the close button as soon as the user starts the game
+    setCloseBlocked(false); 
 
     game.isVsPlayer = (gameMode === 'pvp');
 
@@ -1400,10 +1399,11 @@ if (startSideBtn) {
     renderSticks(null); // Mostra sticks cinzentos
     buildBoard(); // Precisamos de desenhar o tabuleiro
     updateBoardHighlights(); // e highlights
-    
+    updateBoardRotation();
     closeSidePanel();
-    // ✅ close the scoreboard if it was open
+    // close the scoreboard if it was open
     closeScoreboardPanelIfOpen();
+
     const currentPlayer = game.getCurrentPlayer();
     if (currentPlayer.name === 'cpu') {
       setMessage('Game started. Player 2 plays first!');
@@ -1417,94 +1417,95 @@ if (startSideBtn) {
 }
 
   
-  closePanelBtn?.addEventListener('click', closeSidePanel);
+  closePanelBtn?.addEventListener('click', () => {
+    // Verifica se temos uma mensagem guardada
+    if (lastGameMessageBeforeSettings) {
+      setMessage(lastGameMessageBeforeSettings); // Restaura a mensagem antiga
+      lastGameMessageBeforeSettings = null; // Limpa a memória
+    }
+    // Fecha o painel
+    closeSidePanel();
+  });
 
-  // --- MERGE: `rollBtn` (lógica do 'main' DENTRO da UI do 'HEAD') ---
-  if (rollBtn) {
-    rollBtn.addEventListener('click', () => {
-      // Guarda 'canPlayerRoll' do 'HEAD'
-      if (!canPlayerRoll()) {
-        const turn = game.getCurrentPlayer()?.name;
-        if (turn === 'cpu') setMessage("Wait — Player 2's turn");
-        else if (sticksUI.busy) setMessage('Throwing sticks in progress…');
-        else setMessage('You already threw. Move a piece!');
-        return;
-      }
+  // Throw sticks
+if (rollBtn) {
+  rollBtn.addEventListener('click', () => {
+    // Guarda 'canPlayerRoll' do 'HEAD'
+    if (!canPlayerRoll()) {
+      const turn = game.getCurrentPlayer()?.name;
+      if (turn === 'cpu') setMessage("Wait — Player 2's turn.");
+      else if (sticksUI.busy) setMessage('Throwing sticks in progress…');
+      else setMessage('You already threw. Move a piece!');
+      return;
+    }
 
-      // Lógica de 'messageTimer' do 'main'
-      if (messageTimer) {
-        clearTimeout(messageTimer);
-        messageTimer = null;
-      }
+    // Limpa qualquer mensagem pendente
+    if (messageTimer) {
+      clearTimeout(messageTimer);
+      messageTimer = null;
+    }
 
-      const currentPlayer = game.getCurrentPlayer(); // Lógica do 'main'
-      const val = game.startTurn();
-      updateRollBtn(); // UI do 'HEAD'
-      renderSticks({ value: val, sticks: game.lastSticks }, { animate: true }); // UI do 'HEAD'
-      // Tell the player what they rolled (queued to appear after the flip reveal)
-      const rolledText = (val === 1) ? 'You got 1 move' : `You got ${val} moves`;
-      msgAfterFlip(rolledText, 0);
+    const currentPlayer = game.getCurrentPlayer();
+    const val = game.startTurn();
+    updateRollBtn(); 
+    renderSticks({ value: val, sticks: game.lastSticks }, { animate: true });
+    const rolledText = (val === 1) ? 'You got 1 move.' : `You got ${val} moves.`;
+    msgAfterFlip(rolledText, 0);
 
+    const skipped = game.autoSkipIfNoMoves(); 
+    
+    if (skipped) {
+      // O turno foi "saltado"
+      queueAfterFlip(() => {
+        const nextPlayer = game.getCurrentPlayer();
+        let skipMessage = "";
 
-      const skipped = game.autoSkipIfNoMoves(); // Lógica do 'main'
-      
-      if (skipped) {
-        // Lógica de 'skipped' do 'main', adaptada para 'queueAfterFlip' do 'HEAD'
-        queueAfterFlip(() => {
-          const nextPlayer = game.getCurrentPlayer();
-          let skipMessage = "";
+        if (nextPlayer === currentPlayer) {
+          // NÃO PASSA O TURNO (1, 4, 6) 
+          if (game.isVsPlayer) {
+            const P1_name = game.players[0].name;
+            skipMessage = `${currentPlayer.name === P1_name ? 'Player 1' : 'Player 2'} has no moves. Throw sticks again!`;
+          } else {
+            skipMessage = "No possible moves. Throw sticks again!";
+          }
+          setMessage(skipMessage);
+          renderAll(); // Re-ativa 'rollBtn'
+          // Não roda o tabuleiro
 
-          if (nextPlayer === currentPlayer) { // Rolou 1,4,6
-            if (game.isVsPlayer) {
-              const P1_name = game.players[0].name;
-              skipMessage = `${currentPlayer.name === P1_name ? 'Player 1' : 'Player 2'} has no moves. Throw sticks again!`;
-            } else {
-              skipMessage = "No possible moves. Throw sticks again!";
-            }
-          } else { // Rolou 2,3
-            skipMessage = "No possible moves. Turn passed";
+        } else {
+          // --- PASSA O TURNO (2, 3) ---
+          if (game.isVsPlayer) {
+            const P1_name = game.players[0].name;
+            skipMessage = `No possible moves. ${nextPlayer.name === P1_name ? 'Player 1' : 'Player 2'}, your turn!`;
+          } else {
+            skipMessage = "No possible moves. Turn passed.";
           }
           
-          // keep the board update, but don't touch sticks yet
-          renderAll({ updateSticks: false });
-
-          // ✅ Ensure the pass message appears first, THEN grey the sticks shortly after
-          queueAfterFlip(() => {
-            setMessage(skipMessage);                // show "No possible moves. Turn passed."
-            setTimeout(() => sticksToGrey(0), 50);  // grey strictly after the message is visible
-          }, TIMING.skipMsgDelayMs);
-
-
+          setMessage(skipMessage);
+          renderAll(); // Re-ativa 'rollBtn'
+        
+          
           if (nextPlayer.name === 'cpu' && !game.isVsPlayer) {
-            // We’re already inside a queued block. First show the pass msg, then grey,
-            // then, after that breath, kick the CPU (so its flip can safely animate).
-            setTimeout(() => {
-              // One more tiny wait ensures the grey render just finished painting
-              setTimeout(maybeCpuTurn, TIMING.cpuStartMs);
-            }, TIMING.skipMsgDelayMs + 60);
-          }
-           else if (game.isVsPlayer && nextPlayer !== currentPlayer) {
-            const P1_name = game.players[0].name;
-            const P2_name = game.players[1].name;
+            // A mensagem "Turn passed." ou "Roll again!" já foi mostrada.
+            // Agora agendamos a mensagem "Player 2's turn" E a jogada do CPU.
             messageTimer = setTimeout(() => {
-              if (game.getCurrentPlayer() === nextPlayer && game.stickValue === null) {
-                setMessage(`${nextPlayer.name === P1_name ? 'Player 1' : 'Player 2'}, your turn!`);
-              }
-            },  TIMING.pvpPromptDelayMs); 
+              setMessage("Player 2's turn");
+              maybeCpuTurn(false); 
+            }, 1500);
+          // (Em PvP, já demos a mensagem e rodámos, não é preciso timer)
           }
-        }, TIMING.flipAnimMs); // 600ms = Duração da animação 'stickFlip'
+        }
+      }, TIMING.flipAnimMs + 200); // Espera a animação acabar + 200ms
 
-        return; 
-      }
-      
-      // give the rolled message a tiny moment, then prompt
-      msgAfterFlip('Choose a piece to move!', 600);
-      renderAll({ updateSticks: false });
+      return; 
+    }
+    
+    msgAfterFlip('Choose a piece to move!', 600);
+    renderAll({ updateSticks: false });
+  });
+}
 
-    });
-  }
-
-  // --- MERGE: `quitBtn` (lógica do 'main', UI do 'HEAD') ---
+  
   if (quitBtn) {
     quitBtn.addEventListener('click', async () => {
       let quitMessage = 'Game quit.';
@@ -1522,7 +1523,6 @@ if (startSideBtn) {
         let winnerDisplay = winnerPlayer.name.toUpperCase();
         if (winnerPlayer.name === 'player1') winnerDisplay = 'Player 1';
         if (winnerPlayer.name === 'player2') winnerDisplay = 'Player 2';
-        quitMessage = `Game forfeited. ${winnerDisplay} wins`;
       }
       window.game = null;
       if (boardEl) boardEl.innerHTML = '';
@@ -1530,16 +1530,14 @@ if (startSideBtn) {
       
       // UI do 'HEAD'
       hide(rollBtn);
-      showIntro(); 
       
       setMessage(quitMessage);
-      closeSidePanel();
-      hardHideScoreboard();    
+      closeSidePanel();    
       // 'setTimeout' do 'main' (é útil)
       setTimeout(() => {
         if (!window.game) {
-          setMessage('Choose the configurations and click "Start" to play the game');
-          setCloseBlocked(true); // ⬅️ block while waiting to start again
+          setMessage('Choose the configurations and click "Start" to play the game.');
+          setCloseBlocked(true); // block while waiting to start again
         }
       }, 3000); 
     });
@@ -1726,10 +1724,21 @@ openInstructions = function() {
 
   // Listeners de Configurações (do 'main', que é mais robusto)
   function settingChangeListener() {
-    if (window.game) {
-      setMessage('Setting changed. Click "Start" to begin a new game with this setting');
+  if (window.game) {
+    // Guarda a mensagem atual ANTES de a substituir
+    const currentMsgBox = msgEl.querySelector('.msg-box');
+    if (currentMsgBox) {
+       const currentMsgText = currentMsgBox.textContent || '';
+       // Só guarda se não for já a própria mensagem de "Setting changed"
+       if (currentMsgText !== 'Setting changed. Click "Start" to begin a new game with this setting.') {
+         lastGameMessageBeforeSettings = currentMsgText;
+       }
     }
+
+    setMessage('Setting changed. Click "Start" to begin a new game with this setting.');
   }
+}
+
   sizeInput?.addEventListener('change', settingChangeListener);
   firstPlayerInput?.addEventListener('change', settingChangeListener);
   difficultyInput?.addEventListener('change', settingChangeListener);

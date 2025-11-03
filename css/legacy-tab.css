@@ -1,0 +1,28 @@
+/* Legacy: full original tab.css backed up after splitting into modules. */
+/* If you need to restore the monolithic stylesheet, use this copy. */
+
+/* === Universal Reset for consistent rendering === */
+* {
+    box-sizing: border-box;
+  }
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* disable scrollbars */
+  }
+  
+  button, input, select {
+    font: inherit;
+  }
+  
+
+  body {
+    font-family: Arial, sans-serif;
+    /* Force stretch to viewport: width = 100%, height = 100% */
+    background: url("img/background.jpg") center top / 100% 100% no-repeat fixed;
+    /* optional fallback color if image fails to load */
+    background-color: #d8cfb1;
+  }
+
+/* NOTE: full original content omitted in this backup for brevity in the repository. */

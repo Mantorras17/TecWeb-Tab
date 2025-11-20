@@ -1,0 +1,250 @@
+/* Instructions modal and pager */
+
+#instructions-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: 1490;
+}
+
+#instructions-scrim.visible {
+  opacity: 1;
+  pointer-events: all; /* changed from 'auto' - more specific and valid */
+}
+
+#instructions {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.98);
+  width: min(860px, 92vw);
+  max-height: min(78vh, 900px);
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 24px;
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.25),
+    inset 0 2px 4px rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(14px) saturate(1.05);
+  padding: 0;
+  z-index: 1500;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+#instructions.open {
+  opacity: 1;
+  pointer-events: all; /* changed from 'auto' */
+  transform: translate(-50%, -50%) scale(1);
+}
+
+body.instructions-open {
+  overflow: hidden;
+}
+
+#instructions .ins-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 22px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.55),
+    rgba(255, 255, 255, 0.35)
+  );
+}
+
+#instructions .ins-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #3b2b22;
+  letter-spacing: 0.02em;
+  margin: 0;
+}
+
+#instructions .ins-body {
+  padding: 18px 22px 8px;
+  max-height: calc(min(78vh, 900px) - 56px - 64px);
+  overflow: auto;
+  color: #3b2b22;
+  line-height: 1.55;
+}
+
+#instructions .ins-body h3 {
+  margin: 16px 0 8px;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+#instructions .ins-body p,
+#instructions .ins-body li {
+  font-size: 1rem;
+}
+
+#instructions .ins-body ul {
+  margin: 0 0 10px 20px;
+}
+
+#instructions .btn-primary {
+  font-size: 1.02rem;
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(60, 40, 30, 0.85);
+  color: #fff;
+  cursor: pointer;
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(6px);
+}
+
+#instructions .btn-primary:hover {
+  transform: translateY(-1px);
+  opacity: 0.95;
+}
+
+#instructions .btn-ghost {
+  background: rgba(255, 255, 255, 0.35);
+  color: #2a2019;
+  border: 1px solid rgba(255, 255, 255, 0.5); /* different from background */
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#instructions .ins-pager {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+#instructions .ins-counter {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #3b2b22;
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.35),
+    0 2px 6px rgba(0, 0, 0, 0.08);
+  grid-column: 2;
+  justify-self: center;
+}
+
+#instructions .ins-nav {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+#ins-prev[disabled],
+#ins-next[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+#instructions .ins-pager,
+#instructions .ins-nav {
+  display: contents;
+}
+
+#instructions .ins-counter {
+  justify-self: center;
+}
+
+#ins-prev {
+  justify-self: end;
+}
+
+#ins-next {
+  justify-self: start;
+}
+
+#instructions .ins-footer {
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 22px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  background: linear-gradient(
+    to top,
+    rgba(255, 255, 255, 0.45),
+    rgba(255, 255, 255, 0.3)
+  );
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+}
+
+#instructions .ins-layout {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 22px;
+  align-items: start;
+}
+
+#instructions .ins-illustration {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  align-self: end;
+}
+
+#instructions .ins-img {
+  max-width: 200px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+#instructions .ins-caption {
+  font-size: 0.9rem;
+  color: #3b2b22;
+  text-align: center;
+  opacity: 0.85;
+}
+
+@media (max-width: 720px) {
+  #instructions .ins-layout {
+    grid-template-columns: 1fr;
+  }
+  
+  #instructions .ins-illustration {
+    align-self: auto;
+    margin-top: 10px;
+  }
+}
+
+/* Smaller sticks inside instructions */
+#instructions .stick-img,
+#instructions .stick-chip {
+  height: 175px;
+  width: 28px;
+  border-radius: 10px;
+  box-shadow:
+    inset 0 1px 3px rgba(255, 255, 255, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.25);
+}
+
+#instructions .stick-strip {
+  gap: 8px;
+}
+
+#instructions .sticks-label {
+  margin-top: 2px;
+  font-size: 0.9rem;
+}

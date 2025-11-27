@@ -217,8 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
     hardShowScoreboard();
 
     if (sticksEl) {
-      sticksEl.classList.remove('hidden');
-      sticksEl.style.display = '';
+      show(sticksEl);
     }
 
     renderSticks(null);
@@ -463,7 +462,6 @@ document.addEventListener('DOMContentLoaded', () => {
   function openSidePanel() {
     if (!sidePanel || !menuBtn) return;
     sidePanel.classList.add('open');
-    sidePanel.style.width = 'min(360px, 90vw)';
     menuBtn.innerHTML = '&times;';
     setTimeout(() => sidePanel.focus(), 100);
   }
@@ -475,7 +473,6 @@ document.addEventListener('DOMContentLoaded', () => {
   function closeSidePanel() {
     if (!sidePanel || !menuBtn) return;
     sidePanel.classList.remove('open');
-    sidePanel.style.width = '0';
     menuBtn.innerHTML = '&#9776;';
   }
 
@@ -521,13 +518,21 @@ document.addEventListener('DOMContentLoaded', () => {
   /**
    * Hide any element by adding 'hidden' and setting display: none.
    */
-  function hide(el){ if(el){ el.classList.add('hidden'); el.style.display = 'none'; }}
+  function hide(el) {
+    if (el) { 
+      el.classList.add('hidden', 'display-none');
+    }
+  }
 
 
   /**
    * Show any element by removing 'hidden' and restoring display.
    */
-  function show(el){ if(el){ el.classList.remove('hidden'); el.style.display = ''; }}
+  function show(el) {
+    if (el) {
+      el.classList.remove('hidden', 'display-none');
+    }
+  }
 
 
   /**
@@ -535,16 +540,17 @@ document.addEventListener('DOMContentLoaded', () => {
    */
   function showIntro() {
     if (intro) {
-      intro.classList.remove('hidden');
-      intro.hidden = false;
-      intro.style.display = 'grid';
+      show(intro);
+      intro.removeAttribute('hidden');
     }
     if (modeScreen) {
-      modeScreen.classList.add('hidden');
-      modeScreen.hidden = true;
-      modeScreen.style.display = 'none';
+      hide(modeScreen);
+      modeScreen.setAttribute('hidden', '');
     }
-    if (mainGrid) mainGrid.style.display = 'none';
+    if (mainGrid) {
+      mainGrid.classList.add('hidden');
+      mainGrid.classList.remove('visible');
+    }
     hide(menuBtn);
     hide(rollBtn);
   }
@@ -555,17 +561,16 @@ document.addEventListener('DOMContentLoaded', () => {
    */
   function showGame() {
     if (intro) {
-      intro.classList.add('hidden');
-      intro.hidden = true;
-      intro.style.display = 'none';
+      hide(intro);
+      intro.setAttribute('hidden', '');
     }
     if (modeScreen) {
-      modeScreen.classList.add('hidden');
-      modeScreen.hidden = true;
-      modeScreen.style.display = 'none';
+      hide(modeScreen);
+      modeScreen.setAttribute('hidden', '');
     }
     if (mainGrid) {
-      mainGrid.style.display = 'grid';
+      mainGrid.classList.remove('hidden');
+      mainGrid.classList.add('visible');
     }
     show(menuBtn);    
     hide(rollBtn)
@@ -587,7 +592,7 @@ document.addEventListener('DOMContentLoaded', () => {
    */
   function hardShowScoreboard() {
     if (!scoreboardPanel) return;
-    scoreboardPanel.style.display = '';
+    scoreboardPanel.classList.remove('display-none');
     scoreboardPanel.removeAttribute('aria-hidden');
   }
 
@@ -677,8 +682,7 @@ document.addEventListener('DOMContentLoaded', () => {
    */
   function renderSticks(valueOrResult, opts = {}) {
     if (!sticksEl) return;
-    sticksEl.classList.remove('hidden');
-    sticksEl.style.display = '';
+    show(sticksEl);
     const force = opts.force === true;
     const animate = opts.animate !== false;
 
@@ -693,7 +697,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!hasValue) {
       const strip = document.createElement('div');
       strip.className = 'stick-strip';
-      strip.style.perspective = '1000px';
       for (let i = 0; i < 4; i++) {
         const img = document.createElement('img');
         img.className = 'stick-img inactive';
@@ -722,16 +725,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const strip = document.createElement('div');
     strip.className = 'stick-strip';
-    strip.style.perspective = '1000px';
 
     faces.forEach(() => {
       const img = document.createElement('img');
       img.className = 'stick-img inactive';
       img.src = 'img/darkpiece.jpg';
       if (animate) {
-        img.style.animation = 'none';
-        void img.offsetWidth;
-        img.style.animation = `stickFlip ${TIMING.flipAnimMs}ms ease-in-out forwards`;
+        img.classList.add('animating');
       }
       strip.appendChild(img);
     });
@@ -796,10 +796,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const box = document.createElement('div');
     box.className = 'board-box';
     const container = document.createElement('div');
-    container.style.display = 'flex';
-    container.style.flexDirection = 'column';
-    container.style.alignItems = 'stretch';
-    container.style.gap = '2px';
+    container.className = 'board-container';
 
     const mePlayer = game.getCurrentPlayer();
     const oppPlayer = game.getOpponentPlayer();
@@ -1025,10 +1022,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         scores.player2.wins + scores.player2.losses + 
                         scores.cpu.wins + scores.cpu.losses;
     if (totalGames === 0) {
-      noScoresMsg.style.display = 'block';
+      noScoresMsg.classList.remove('display-none');
       return;
     }
-    noScoresMsg.style.display = 'none';
+    noScoresMsg.classList.add('display-none');
     const stats = [
       { name: 'Player 1', ...scores.player1 },
       { name: 'Player 2', ...scores.player2 },
@@ -1076,9 +1073,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (sticksEl) {
       sticksEl.innerHTML = '';
-      sticksEl.classList.add('hidden');
-      sticksEl.style.display = 'none';
-    } hide && hide(sticksEl);
+      hide(sticksEl);
+    }
 
     if (scoreboardPanel) {
       scoreboardPanel.classList.add('open');
@@ -1094,13 +1090,13 @@ document.addEventListener('DOMContentLoaded', () => {
       game = null;
 
       if (boardEl) boardEl.innerHTML = '';
-      hide && hide(rollBtn);
-      hide && hide(sticksEl);
-      showGame && showGame();
-      openSidePanel && openSidePanel();
+      hide(rollBtn);
+      hide(sticksEl);
+      showGame();
+      openSidePanel();
 
-      buildBoard && buildBoard();
-      updateBoardHighlights && updateBoardHighlights();
+      buildBoard();
+      updateBoardHighlights();
 
       setMessage('Choose the configurations and click "Start" to play the game.');
       setCloseBlocked(true);
@@ -1124,11 +1120,9 @@ document.addEventListener('DOMContentLoaded', () => {
       modalText.textContent = text;
       modalConfirm.textContent = confirmText;
       modalCancel.textContent = cancelText;
-      modalOverlay.classList.remove('hidden');
-      modalOverlay.style.display = 'grid';
+      show(modalOverlay);
       const close = (value) => {
-        modalOverlay.style.display = 'none';
-        modalOverlay.classList.add('hidden');
+        hide(modalOverlay);
         modalConfirm.onclick = null;
         modalCancel.onclick = null;
         resolve(value);

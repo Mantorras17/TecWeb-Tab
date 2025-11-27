@@ -69,10 +69,9 @@ export default class Piece {
    * - Another of the same player's pieces still occupies the starting row.
    * @returns {boolean}
    */
-  canVisitLastRow() {
-    if (this.state === 'last-row') return false;
+  canMoveInLastRow() {
     const startRow = this.owner.startRow;
-    return !this.owner.pieces.some(p => p !== this && p.row === startRow);
+    return !this.owner.pieces.some(p => p.row === startRow);
   }
 
 

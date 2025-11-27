@@ -175,8 +175,12 @@ export default class TabGame {
           const enteringStartRow = (from.row !== startRow) && (to.row === startRow);
           if (enteringStartRow) return;
 
+          const movingInLastRow = (from.row === lastLine) && (to.row === lastLine);
+          if (movingInLastRow) {
+            if (!piece.canMoveInLastRow()) return;
+          }
+
           const enteringLastRow = (from.row !== lastLine) && (to.row === lastLine);
-          if (enteringLastRow && !piece.canVisitLastRow()) return;
           if (enteringLastRow && piece.state === 'last-row') return;
 
           next.add(nid);

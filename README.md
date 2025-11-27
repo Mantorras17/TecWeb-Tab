@@ -63,8 +63,8 @@ This is an assignment to make a single page application - The Tâb game
          - If they leave the 4th, they move back to the 3rd.
       - Restrictions:
          - There can only be one piece on a cell at a time.
-         - A piece can only get to the 4th line ONE TIME.
-         - A piece can only move in the 4th line if all of the player's pieces are out of the 1st line;
+         - A piece can enter the 4th line at any time but can only do it ONCE.
+         - A piece can only move around in the 4th line if all of the player's pieces are out of the 1st line;
          - A piece cannot move back to the 1st line.
    
    6. Capture pieces:

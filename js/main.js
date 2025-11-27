@@ -443,9 +443,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-
-  // === Group: UI helpers and panels ===
-
   /**
    * Enable/disable the side panel close button (and sync aria state).
    */

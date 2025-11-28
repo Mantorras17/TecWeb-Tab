@@ -1,4 +1,4 @@
-/** @typedef {import('./piece.js').default} Piece */
+/** @typedef {import('./classes/piece.js').default} Piece */
 /** @typedef {'player1'|'player2'|'cpu'|string} PlayerName */
 /** @typedef {'not-moved'|'first-row'|'moved'|'last-row'} PieceState */
 

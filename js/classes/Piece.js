@@ -1,5 +1,5 @@
 /** @typedef {'not-moved'|'first-row'|'moved'|'last-row'} PieceState */
-/** @typedef {import('./player.js').default} Player */
+/** @typedef {import('../player.js').default} Player */
 
 
 

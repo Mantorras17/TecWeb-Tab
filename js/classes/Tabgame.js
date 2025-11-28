@@ -1,6 +1,6 @@
-import Board from './board.js'
-import Player from './player.js'
-import Piece from './piece.js'
+import Board from './Board.js'
+import Player from './Player.js'
+import Piece from './Piece.js'
 /** @typedef {row:number, col:number} Cell */
 
 

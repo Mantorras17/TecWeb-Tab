@@ -42,45 +42,49 @@
   box-shadow: inset 0 2px 4px rgba(255,255,255,0.4), inset 0 -2px 4px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.15);
 }
 
-/* Flow arrows overlay on cells – subtle, theme-matching */
+/* Flow arrows overlay on cells – Unicode arrows */
 .board-cell.flow { position: relative; }
 .board-cell.flow::after {
   content: "";
   position: absolute;
-  inset: 18% 16%; /* slightly smaller for subtle look */
-  background: none;
-  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M12 32h28" stroke="%23f3e5c8" stroke-width="4" stroke-linecap="round"/><path d="M36 22l12 10-12 10" fill="none" stroke="%23f3e5c8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>');
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: contain;
-  opacity: 0.35;
-  pointer-events: none;
-  z-index: 0; /* keep under pieces */
-  transform: none;
-}
-.board-cell.flow-right::after { transform: none; }
-.board-cell.flow-left::after { transform: rotate(180deg); }
-.board-cell.flow-diag-45::after { transform: rotate(45deg) !important; }
-.board-cell.flow-diag-135::after { transform: rotate(135deg) !important; }
-.board-cell.flow-diag-225::after { transform: rotate(225deg) !important; }
-.board-cell.flow-diag-315::after { transform: rotate(315deg) !important; }
-
-/* Special corner with two diagonals (row 1, last col): up-right and down-right */
-.board-cell.flow-diag-right-both::after { transform: rotate(45deg) scale(0.9) !important; inset: 6% 20% 46% 20%; }
-.board-cell.flow-diag-right-both::before {
-  content: "";
-  position: absolute;
-  inset: 26% 16% 10% 16%;
-  background: none;
-  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M12 32h28" stroke="%23f3e5c8" stroke-width="4" stroke-linecap="round"/><path d="M36 22l12 10-12 10" fill="none" stroke="%23f3e5c8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>');
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: contain;
-  opacity: 0.35;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #f3e5c8;
+  opacity: 0.4;
   pointer-events: none;
   z-index: 0;
-  transform: rotate(315deg) scale(0.9) !important;
-  inset: 46% 20% 6% 20%;
+  font-weight: bold;
+}
+
+.board-cell.flow-right::after { content: "→"; }
+.board-cell.flow-left::after { content: "←"; }
+.board-cell.flow-diag-45::after { content: "↗"; }
+.board-cell.flow-diag-135::after { content: "↖"; }
+.board-cell.flow-diag-225::after { content: "↙"; }
+.board-cell.flow-diag-315::after { content: "↘"; }
+
+/* Special corner with two arrows */
+.board-cell.flow-diag-right-both::after {
+  content: "↗";
+  inset: -5% 0 50% 0;
+  font-size: 20px;
+}
+.board-cell.flow-diag-right-both::before {
+  content: "↘";
+  position: absolute;
+  inset: 50% 0 -5% 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #f3e5c8;
+  opacity: 0.4;
+  pointer-events: none;
+  z-index: 0;
+  font-weight: bold;
 }
 
 .row-sep { height: 2px; background: #fff4f4; margin: 4px 0; width: 100%; }

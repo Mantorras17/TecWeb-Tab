@@ -353,25 +353,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target.closest('.ins-close')) closeInstructions();
   });
 
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && instrPanel?.classList.contains('open')) {
-      closeInstructions();
-    }
-  });
-
   instrScrim?.addEventListener('click', closeInstructions);
 
   insPrev?.addEventListener('click', prevPage);
   insNext?.addEventListener('click', nextPage);
-
-  document.addEventListener('keydown', (e) => {
-    if (!instrPanel?.classList.contains('open')) return;
-    if (e.key === 'ArrowRight') { e.preventDefault(); nextPage(); }
-    if (e.key === 'ArrowLeft')  { e.preventDefault(); prevPage(); }
-    if (e.key === 'Home')       { e.preventDefault(); goToPage(0); }
-    if (e.key === 'End')        { e.preventDefault(); goToPage(instructionPages.length - 1); }
-  });
-
 
   if (scoreboardBtn && scoreboardPanel) {
     scoreboardBtn.addEventListener('click', () => {
@@ -814,16 +799,16 @@ document.addEventListener('DOMContentLoaded', () => {
         cell.classList.add('flow', flowClass);
 
         if (r === 0 && c === 0) {
-          cell.classList.add('flow-diag-135');
+          cell.classList.add('flow-diag-225');
         }
         if (r === 1 && c === game.columns - 1) {
           cell.classList.add('flow-diag-right-both');
         }
         if (r === 2 && c === 0) {
-          cell.classList.add('flow-diag-225');
+          cell.classList.add('flow-diag-135');
         }
         if (r === 3 && c === game.columns - 1) {
-          cell.classList.add('flow-diag-315');
+          cell.classList.add('flow-diag-45');
         }
 
         const me = mePlayer.getPieceAt(r, c);

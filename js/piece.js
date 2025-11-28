@@ -40,6 +40,11 @@ export default class Piece {
       this.state = 'last-row';
       return;
     }
+
+    if (this.state === 'last-row') {
+      return;
+    }
+
     if (newRow === firstRow) {
       this.state = 'first-row';
       return;
@@ -49,6 +54,22 @@ export default class Piece {
     } else if (this.state === 'first-row' && newRow !== firstRow) {
       this.state = 'moved';
     }
+  }
+
+  /**
+   * Whether this piece has ever been in the last row.
+   * @returns {boolean}
+   */
+  hasBeenInLastRow() {
+    return this.state === 'last-row';
+  }
+
+  /**
+   * Whether this piece is currently in the last row.
+   * @returns {boolean}
+   */
+  isCurrentlyInLastRow() {
+    return this.row === this.calculateLastRow();
   }
 
 

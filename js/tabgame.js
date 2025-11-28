@@ -175,13 +175,8 @@ export default class TabGame {
           const enteringStartRow = (from.row !== startRow) && (to.row === startRow);
           if (enteringStartRow) return;
 
-          const movingInLastRow = (from.row === lastLine) && (to.row === lastLine);
-          if (movingInLastRow) {
-            if (!piece.canMoveInLastRow()) return;
-          }
-
           const enteringLastRow = (from.row !== lastLine) && (to.row === lastLine);
-          if (enteringLastRow && piece.state === 'last-row') return;
+          if (enteringLastRow && piece.hasBeenInLastRow()) return;
 
           next.add(nid);
         });
@@ -191,10 +186,16 @@ export default class TabGame {
     }
 
     const coords = Array.from(frontier).map(id => graph.idToCoord(id));
-    return coords.filter(({ row, col }) => {
+    const filtered = coords.filter(({ row, col }) => {
       const occ = this.isCellOccupied(row, col);
-      return !(occ && occ.owner === 'me');
+      const blocked = (occ && occ.owner === 'me');
+
+      if (row === lastLine && piece.isCurrentlyInLastRow()) {
+        if (!piece.canMoveInLastRow()) return false;
+      }
+      return !blocked;
     });
+    return filtered;
   }
 
 

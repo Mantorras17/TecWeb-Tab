@@ -1,6 +1,8 @@
-This is an assignment to make a single page application - The Tâb game  
+<h1>FIRST PHASE</h1>
 
-<h3>RULES</h3>
+This is an assignment to make a single page application - The Tâb game
+
+<h2>RULES</h2>
 
  - Board:
    1. Tâb is a board game for 2 players
@@ -150,32 +152,21 @@ The page must be divided in various divs for these different finalities:
          - By far the best way to implement a CPU with levels of difficulty is using the MinMax algorithm, where the depth can map difficulty (implement this one).
 
 
-   - Feature Ideas:
-      1. Scoreboard w/local, country and global
-      2. Customization of pieces with pngs or similar
-      3. dark/light mode
-      4. sound Effects!
-      5. User menu popover
-      6. Instructions
-      7. Accessible controls (keyboard navigation and ARIA labels)
-      8. Smooth transitions 
-      9. Highlight active elements
-      10. Responsive layout
 
-   - Layout:
+   - Layout (see in raw format):
 
-      +-----------+----------------------------------------+----------+ 
-      | sidePanel |  LogoSymbol     LOGO                   |  login   | 
-      | (hidden)  +--+-------------------------------------+    w/    | 
-      |           |  |               messages              | popover  | 
-      | Configs   |  +-------------------------------------+----------+
-      | Instrs    |  |                                     |          | 
-      |           |  |                                     |          | 
-      |           |  |            boardgame                |  sticks  | 
-      |           |  |                                     |          | 
-      |           |  |                                     |          | 
-      |           +--+----+----------+-----------+---------+----------+ 
-      |           | local | national | worldwide |                    | 
-      |           +       +----------+-----------+--------------------+ 
-      |           |        scoreboard                                 | 
-      +-----------+---------------------------------------------------+ 
++-----------+----------------------------------------+----------+ 
+| sidePanel |  LogoSymbol     LOGO                   |  login   | 
+| (hidden)  +----------------------------------------+    w/    | 
+|           |                messages                | popover  | 
+| Configs   +----------------------------------------+----------+
+| Instrs    |                                        |          | 
+|           |                                        |          | 
+|           |               boardgame                |  sticks  | 
+|           |  |                                     |          | 
+|           |  |                                     |          | 
+|           +--+----+----------+-----------+---------+----------+ 
+|           | local | national | worldwide |                    | 
+|           +       +----------+-----------+--------------------+ 
+|           |        scoreboard                                 | 
++-----------+---------------------------------------------------+ 

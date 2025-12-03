@@ -1,0 +1,46 @@
+/* Piece visuals and skins */
+.piece {
+  background: none !important;
+  background-color: transparent !important;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+  width: var(--piece, 50px);
+  height: var(--piece, 50px);
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease;
+  filter: sepia(0.2) brightness(1.1);
+}
+
+.piece.p1 {
+  background-image: url("../img/lightpiece.jpg") !important;
+}
+
+.piece.p2 {
+  background-image: url("../img/darkpiece.jpg") !important;
+}
+
+.piece:hover {
+  transform: scale(1.08);
+}
+
+.piece.selected {
+  transform: scale(1.1) translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
+  z-index: 10;
+}
+
+.piece.last-line {
+  border: 2px solid #333;
+}
+
+/* Ensure pieces render above board flow arrows */
+.board-cell .piece {
+  position: relative;
+  z-index: 1;
+}
+
+#board.disabled-board {
+  pointer-events: none;
+}

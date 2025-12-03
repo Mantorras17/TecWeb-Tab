@@ -1,0 +1,27 @@
+/* === Base reset and globals === */
+* { box-sizing: border-box; }
+
+html, body { 
+  height: 100%; 
+  margin: 0; 
+  padding: 0; 
+  overflow: hidden; 
+}
+
+button, input, select { font: inherit; }
+
+body {
+  font-family: Arial, sans-serif;
+  background: url("../img/background.jpg") center top / 100% 100% no-repeat fixed;
+  background-color: #d8cfb1;
+}
+
+:root {
+  --top-veil-h: clamp(120px, 18vh, 200px);
+  --cell: clamp(50px, 6vw, 72px);
+  --gap: clamp(4px, 0.6vw, 8px);
+  --piece: calc(var(--cell) * 0.74);
+  --bar-top: calc(var(--top-veil-h) - 26px);
+  --bar-height: 18px;
+  --sticks-nudge: calc(-0.8 * var(--cell));
+}

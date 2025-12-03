@@ -12,19 +12,12 @@
   box-shadow:
     0 0 0 3px #444 inset,
     0 8px 20px rgba(0, 0, 0, 0.25);
-<<<<<<< HEAD
-  transition: transform 0.3s ease;
-  display: inline-flex;
-  width: max-content;
-  transition: transform 0.6s ease-in-out;
-=======
   
   /* MOVED HERE: Smooth rotation in BOTH directions */
   transition: transform 0.8s ease-in-out;
   
   display: inline-flex;
   width: max-content;
->>>>>>> ba73e6af93b2eeed59dc5592724a40f9e16d4a8d
 }
 
 .board-container {
@@ -34,14 +27,10 @@
   gap: 2px;
 }
 
-<<<<<<< HEAD
-.board-box.rotated { transform: rotate(180deg); }
-=======
 /* ONLY transform, no transition here */
 .board-box.rotated { 
   transform: rotate(180deg); 
 }
->>>>>>> ba73e6af93b2eeed59dc5592724a40f9e16d4a8d
 
 #board { max-width: none !important; width: max-content; margin: 10px auto; }
 
@@ -113,8 +102,6 @@
 .board-cell.highlight:active { cursor: grabbing; }
 
 @media (max-width: 600px) { .board-cell, .piece { min-width: 20px; min-height: 20px; } }
-<<<<<<< HEAD
-=======
 
 
 #pass-turn-container {
@@ -124,4 +111,3 @@
 #pass-turn {
   min-width: 180px;       /* a bit wider, optional */
 }
->>>>>>> ba73e6af93b2eeed59dc5592724a40f9e16d4a8d

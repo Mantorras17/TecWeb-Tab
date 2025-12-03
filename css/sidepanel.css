@@ -66,7 +66,11 @@
   font-size: 2em;
   font-weight: 600;
   text-align: left;
+<<<<<<< HEAD
   margin: 32px 0 5px 35px;
+=======
+  margin: 30px 0 5px 35px;
+>>>>>>> ba73e6af93b2eeed59dc5592724a40f9e16d4a8d
   color: #3b2b22;
   letter-spacing: 0.02em;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
@@ -76,7 +80,11 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+<<<<<<< HEAD
   gap: 5px;
+=======
+  gap: 15px;
+>>>>>>> ba73e6af93b2eeed59dc5592724a40f9e16d4a8d
   padding-left: 15px;
   padding-right: 20px;
   width: 100%;
@@ -88,7 +96,11 @@
   font-weight: 600;
   font-size: 1.2rem;
   color: #3b2b22;
+<<<<<<< HEAD
   margin: 30px 0px 3px 30px;
+=======
+  margin: 30px 0px 5px 30px;
+>>>>>>> ba73e6af93b2eeed59dc5592724a40f9e16d4a8d
 }
 
 #configurations > label:first-of-type {

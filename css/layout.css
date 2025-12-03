@@ -89,6 +89,10 @@
 #main-content {
   grid-area: main-content;
   display: flex;
+<<<<<<< HEAD
+=======
+  flex-direction: column;   /* stack vertically */
+>>>>>>> ba73e6af93b2eeed59dc5592724a40f9e16d4a8d
   align-items: center;
   justify-content: center;
   min-width: 0;

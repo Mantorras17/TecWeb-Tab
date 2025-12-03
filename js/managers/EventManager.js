@@ -92,6 +92,10 @@ export default class EventManager {
       this.gameController.handlePlayerRoll();
     }, { required: true });
 
+    this.safeAddEventListener('passTurnBtn', 'click', () => {
+      this.gameController.handlePassTurn();
+    });
+
     // Optional controls - warn but don't fail
     this.safeAddEventListener('quitBtn', 'click', () => {
       this.gameController.handleQuitGame();

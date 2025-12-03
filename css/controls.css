@@ -9,6 +9,7 @@
   --btn-quit-bg: rgba(95, 47, 27, 0.75);
 }
 
+/* Base style for the three main buttons */
 #start-game,
 #quit-game,
 #show-instructions {
@@ -16,8 +17,8 @@
   background: var(--btn-ghost-bg);
   border: 1px solid var(--btn-ghost-border);
   border-radius: 16px;
-  padding: 14px 28px;
-  font-size: 1.1rem;
+  padding: 15px 34px;
+  font-size: 1.02rem;
   font-weight: 600;
   letter-spacing: 0.02em;
   color: #2a2019;
@@ -26,18 +27,28 @@
     inset 0 1px 0 rgba(255,255,255,0.35),
     0 6px 16px rgba(0,0,0,0.18);
   transition: transform 120ms ease, opacity 120ms ease, box-shadow 120ms ease;
-  width: 80%;
-  max-width: 200px;
+
+  /* shorter + centered */
+  width: auto;
+  max-width: none;
   justify-self: center;
+  margin: 0;
 }
+
 
 /* Hover + Active states */
 #start-game:hover,
 #quit-game:hover,
-#show-instructions:hover { transform: translateY(-1px); opacity: 0.95; }
+#show-instructions:hover {
+  transform: translateY(-1px);
+  opacity: 0.95;
+}
 #start-game:active,
 #quit-game:active,
-#show-instructions:active { transform: translateY(0); opacity: 0.9; }
+#show-instructions:active {
+  transform: translateY(0);
+  opacity: 0.9;
+}
 
 #start-game:focus-visible,
 #quit-game:focus-visible,
@@ -48,40 +59,46 @@
     0 6px 16px rgba(0,0,0,0.22);
 }
 
-/* Individual button colors */
+/* Individual button colors (no width overrides here!) */
 #start-game {
   background: var(--btn-start-bg);
   color: #2a2019;
-  width: 100%;
-  max-width: none;
-  justify-self: stretch;
+  margin-right: 12px;
+  border-radius: 16px;
+  padding: 15px 40px;    /* wider ⬅️ */
 }
 
 #quit-game {
   background: var(--btn-quit-bg);
   color: #fff;
-  width: 100%;
-  max-width: none;
-  justify-self: stretch;
+  margin-left: 12px;
+  border-radius: 16px;
+  padding: 15px 42px;    /* wider ⬅️ */
 }
 
 #show-instructions {
   background: var(--btn-primary-bg);
   color: #fff;
   grid-column: 1 / -1;
-  width: 100%;
-  max-width: none;
+  justify-self: center;
+
+  width: fit-content;     /* auto-size to content */
+  padding: 15px 86px;     /* same style as Start/Quit */
+  border-radius: 16px;
 }
 
-/* Layout — centers and adds spacing between buttons */
+
+/* Layout — Start | Quit row, Instructions below, pushed lower */
 #controls {
   display: grid;
-  grid-template-columns: 1fr 1fr; /* Start | Quit */
-  gap: 12px;
-  align-items: stretch;
-  justify-items: stretch;
-  padding: 22px 0 28px 3px;
-  margin-top: -12px;
+  grid-template-columns: auto auto;   /* <<< THIS fixes your spacing */
+  column-gap: 0;
+  row-gap: 30px;
+  align-items: center;
+  justify-items: center;
+  justify-content: center;            /* center the two buttons together */
+  padding: 50px 0 28px 3px;
+  margin-top: 32px !important;
 }
 
 .btn-primary {

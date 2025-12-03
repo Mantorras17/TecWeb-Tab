@@ -60,6 +60,8 @@ export default class GameController {
     this.cpuController.clearTimers();
 
     this.uiManager.show(elements.rollBtn);
+    this.uiManager.show(elements.passTurnBtn); // Ensure Pass button is visible now
+
     this.updateRollBtn();
     this.uiManager.hardShowScoreboard();
     this.uiManager.show(elements.sticksEl);
@@ -81,8 +83,8 @@ export default class GameController {
   }
 
   /**
-   * Handle human player roll
-   */
+     * Handle human player roll
+     */
   handlePlayerRoll() {
     const currentPlayer = this.game.getCurrentPlayer();
     
@@ -101,51 +103,39 @@ export default class GameController {
 
     const val = this.game.startTurn();
     this.updateRollBtn();
+    
     this.sticksRenderer.renderSticks({ value: val, sticks: this.game.lastSticks }, { animate: true });
-    this.sticksRenderer.queueAfterFlip(() => this.announceRoll(currentPlayer?.name ?? 'Player', val));
+    
+    this.sticksRenderer.queueAfterFlip(() => {
+        this.announceRoll(currentPlayer?.name ?? 'Player', val);
 
-    const skipped = this.game.autoSkipIfNoMoves();
+        const hasMoves = this.hasAnyValidMoves();
 
-    if (skipped) {
-      this.sticksRenderer.queueAfterFlip(() => {
-        const nextPlayer = this.game.getCurrentPlayer();
-        let skipMessage = "";
-
-        if (nextPlayer === currentPlayer) {
-          if (this.game.isVsPlayer) {
-            const P1_name = this.game.players[0].name;
-            skipMessage = `${currentPlayer.name === P1_name ? 'Player 1' : 'Player 2'} has no moves. Throw sticks again!`;
+        // --- NEW LOGIC START ---
+        if (!hasMoves) {
+          const isBonus = [1, 4, 6].includes(val);
+          
+          if (isBonus) {
+              // CASE: Bonus Roll (4/6) but No Moves.
+              // Auto-resolve: Keep the turn, clear the "move phase", let player roll again immediately.
+              this.uiManager.setMessage(`You rolled a ${val} (Bonus) but have no moves. Throw again!`);
+              
+              // This resets stickValue to null, which enables the Roll button and disables Pass button
+              this.game.endTurn(true); 
           } else {
-            skipMessage = "No possible moves. Throw sticks again!";
+              // CASE: Normal Roll (2/3) and No Moves.
+              // Must manually Pass Turn to acknowledge loss of turn.
+              this.uiManager.setMessage(`No moves available for ${val}. Click 'Pass Turn' to end turn.`);
           }
-          this.uiManager.setMessage(skipMessage);
-          this.renderAll();
         } else {
-          if (this.game.isVsPlayer) {
-            const P1_name = this.game.players[0].name;
-            skipMessage = `No possible moves. ${nextPlayer.name === P1_name ? 'Player 1' : 'Player 2'}, your turn!`;
-          } else {
-            skipMessage = "No possible moves. Turn passed.";
-          }
-
-          this.uiManager.setMessage(skipMessage);
-          this.renderAll();
-
-          if (nextPlayer.name === 'cpu' && !this.game.isVsPlayer) {
-            this.messageTimer = setTimeout(() => {
-              this.uiManager.setMessage("Player 2's turn");
-              this.cpuController.maybeCpuTurn(this.game, false);
-            }, 1500);
-          }
+          this.sticksRenderer.msgAfterFlip('Choose a piece to move!', 600);
         }
-      }, TIMING.flipAnimMs + 200);
-      return;
-    }
+        // --- NEW LOGIC END ---
 
-    this.sticksRenderer.msgAfterFlip('Choose a piece to move!', 600);
-    this.renderAll({ updateSticks: false });
+        // This will update buttons based on the new state set above
+        this.renderAll({ updateSticks: false });
+    });
   }
-
   /**
    * Handle board cell click
    */
@@ -191,23 +181,20 @@ export default class GameController {
         if (this.checkGameOver()) return;
 
         const nextPlayer = this.game.getCurrentPlayer();
-        if (nextPlayer.name === 'cpu' && !this.game.isVsPlayer) {
+        const P1_name = this.game.players[0].name;
+        
+        if (this.game.waitingForPass) {
+            this.uiManager.setMessage("Move complete. Click 'Pass Turn' to finish.");
+        } 
+        else if (nextPlayer.name === 'cpu' && !this.game.isVsPlayer) {
           this.uiManager.setMessage("Player 2's turn.");
           this.sticksRenderer.queueAfterFlip(() => this.cpuController.maybeCpuTurn(this.game, false), TIMING.humanToCpuMs);
         } else {
-          if (nextPlayer === currentPlayer) {
-            if (this.game.isVsPlayer) {
-              const P1_name = this.game.players[0].name;
-              this.uiManager.setMessage(`${currentPlayer.name === P1_name ? 'Player 1' : 'Player 2'}, play again!`);
-            } else {
-              this.uiManager.setMessage("Play again!");
-            }
-          } else {
-            if (this.game.isVsPlayer) {
-              const P1_name = this.game.players[0].name;
-              this.uiManager.setMessage(`${nextPlayer.name === P1_name ? 'Player 1' : 'Player 2'}, your turn!`);
-            }
-          }
+           if (nextPlayer === currentPlayer) {
+             this.uiManager.setMessage(`${currentPlayer.name === P1_name ? 'Player 1' : 'Player 2'}, play again!`);
+           } else {
+             this.uiManager.setMessage(`${nextPlayer.name === P1_name ? 'Player 1' : 'Player 2'}, your turn!`);
+           }
         }
       }
     }
@@ -248,22 +235,22 @@ export default class GameController {
   canPlayerRoll() {
     if (!this.game) return false;
     if (this.sticksRenderer.isBusy()) return false;
+    
+    if (this.game.waitingForPass) return false;
+
     const cur = this.game.getCurrentPlayer();
     if (!cur) return false;
     if (cur.name === 'cpu') return false;
     return this.game.stickValue == null;
   }
 
-  /**
-   * Enable/disable the roll button based on current turn and state.
-   */
   updateRollBtn() {
     const enabled = this.canPlayerRoll();
     this.uiManager.updateRollBtn(enabled);
   }
 
   /**
-   * Full UI refresh: board, highlights, sticks (optionally), roll button, and rotation.
+   * Full UI refresh
    */
   renderAll(opts = { updateSticks: true }) {
     if (!this.game) return;
@@ -277,15 +264,20 @@ export default class GameController {
 
     this.updateRollBtn();
 
+    const isCpu = this.game.getCurrentPlayer().name === 'cpu';
+    const hasMoves = this.hasAnyValidMoves(); 
+    const sticksThrown = this.game.stickValue !== null;
+
+    const canPass = ((sticksThrown && !hasMoves) || this.game.waitingForPass) && !isCpu;
+    
+    this.uiManager.updatePassBtn(canPass); 
+
     const currentPlayer = this.game.getCurrentPlayer();
     const isCpuTurn = (currentPlayer.name === 'cpu' && !this.game.isVsPlayer);
     this.uiManager.setBoardDisabled(isCpuTurn);
     this.uiManager.updateBoardRotation(this.game);
   }
 
-  /**
-   * Check whether the game is over and trigger end-game handling if so.
-   */
   checkGameOver() {
     if (!this.game) return false;
     const { over, winner } = this.game.checkGameOver();
@@ -296,9 +288,6 @@ export default class GameController {
     return false;
   }
 
-  /**
-   * Handle end of game: stats, UI disable, auto-redirect back to setup.
-   */
   handleGameOver(winner) {
     if (!winner) return;
 
@@ -330,9 +319,6 @@ export default class GameController {
     }, TIMING.gameOverCleanupMs);
   }
 
-  /**
-   * Announce a roll result using localized names and current player's label.
-   */
   announceRoll(playerName, value) {
     const name = ROLL_NAMES[value] ?? String(value);
     const who =
@@ -342,9 +328,6 @@ export default class GameController {
     this.uiManager.setMessage(`${who} rolled a ${name} (${value})!`);
   }
 
-  /**
-   * Clean up game state
-   */
   cleanupGame() {
     this.cpuController.clearTimers();
     window.game = null;
@@ -352,10 +335,70 @@ export default class GameController {
     this.uiManager.clearGameUI();
   }
 
-  /**
-   * Get current game instance
-   */
   getGame() {
     return this.game;
+  }
+
+  /**
+   * Handle manual pass turn
+   */
+  handlePassTurn() {
+    if (!this.game || this.game.over) return;
+    
+    const currentPlayer = this.game.getCurrentPlayer();
+    
+    // Safety check: CPU shouldn't click buttons
+    if (currentPlayer.name === 'cpu') return;
+
+    // --- FIX: USE CURRENT ON-SCREEN VALUE ---
+    // We use stickValue because it is the active roll that caused us to be stuck.
+    // We fallback to lastStickValue just in case.
+    const currentRoll = this.game.stickValue || this.game.lastStickValue;
+    
+    console.log("Pass Clicked. Roll was:", currentRoll);
+
+    // Explicitly check for bonus numbers (1, 4, 6)
+    const isBonusRoll = [1, 4, 6].includes(currentRoll);
+
+    // If isBonusRoll is TRUE, we force the game to keep the current player.
+    this.game.endTurn(isBonusRoll); 
+
+    // Update the UI
+    this.renderAll({ updateSticks: true }); 
+
+    if (isBonusRoll) {
+        // CASE: You rolled 1, 4, or 6. You keep the turn!
+        this.uiManager.setMessage(`You rolled a ${currentRoll} (Bonus)! Throw sticks again.`);
+        console.log("KEEPING TURN - Player should NOT change");
+    } else {
+        // CASE: You rolled 2 or 3. Turn ends.
+        this.uiManager.setMessage("Turn passed.");
+        console.log("PASSING TURN - Player switching");
+        
+        const nextPlayer = this.game.getCurrentPlayer();
+        
+        if (nextPlayer.name === 'cpu') {
+            this.uiManager.setMessage("Player 2's turn.");
+            this.sticksRenderer.queueAfterFlip(() => {
+                this.cpuController.maybeCpuTurn(this.game, false);
+            }, 1000);
+        } else {
+            const display = nextPlayer.name === 'player1' ? 'Player 1' : 'Player 2';
+            this.uiManager.setMessage(`${display}, your turn!`);
+        }
+    }
+  }
+
+  hasAnyValidMoves() {
+    if (!this.game || this.game.stickValue === null) return false;
+    
+    const player = this.game.getCurrentPlayer();
+    
+    for (const piece of player.pieces) {
+      const moves = this.game.possibleMoves(piece, this.game.stickValue);
+      if (moves.length > 0) return true;
+    }
+    
+    return false;
   }
 }

@@ -89,6 +89,7 @@
 #main-content {
   grid-area: main-content;
   display: flex;
+  flex-direction: column;   /* stack vertically */
   align-items: center;
   justify-content: center;
   min-width: 0;

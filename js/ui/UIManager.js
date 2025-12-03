@@ -50,7 +50,8 @@ export default class UIManager {
       menuLogin: document.getElementById('menu-login'),
       menuSignup: document.getElementById('menu-signup'),
       loginBtn: document.getElementById('btn-login'),
-      signupBtn: document.getElementById('btn-signup')
+      signupBtn: document.getElementById('btn-signup'),
+      passTurnBtn: document.getElementById('pass-turn'),
     };
   }
 
@@ -76,7 +77,7 @@ export default class UIManager {
    * Show intro screen and hide the game grid.
    */
   showIntro() {
-    const { intro, modeScreen, mainGrid, menuBtn, rollBtn } = this.elements;
+    const { intro, modeScreen, mainGrid, menuBtn, rollBtn, passTurnBtn } = this.elements;
     
     if (intro) {
       this.show(intro);
@@ -92,13 +93,16 @@ export default class UIManager {
     }
     this.hide(menuBtn);
     this.hide(rollBtn);
+    
+    // FIX: Ensure Pass Button is hidden on intro
+    this.hide(passTurnBtn);
   }
 
   /**
    * Show the game grid and hide intro/mode screens.
    */
   showGame() {
-    const { intro, modeScreen, mainGrid, menuBtn, rollBtn } = this.elements;
+    const { intro, modeScreen, mainGrid, menuBtn, rollBtn, passTurnBtn } = this.elements;
     
     if (intro) {
       this.hide(intro);
@@ -113,7 +117,10 @@ export default class UIManager {
       mainGrid.classList.add('visible');
     }
     this.show(menuBtn);    
+    
+    // FIX: Hide all game buttons until "Start" is clicked
     this.hide(rollBtn);
+    this.hide(passTurnBtn);
   }
 
   /**
@@ -163,9 +170,16 @@ export default class UIManager {
     const { boardEl } = this.elements;
     if (!boardEl || !game) return;
     
-    boardEl.innerHTML = '';
-    const box = document.createElement('div');
-    box.className = 'board-box';
+    let box = boardEl.querySelector('.board-box');
+    
+    if (!box) {
+        box = document.createElement('div');
+        box.className = 'board-box';
+        boardEl.appendChild(box);
+    }
+    
+    box.innerHTML = '';
+
     const container = document.createElement('div');
     container.className = 'board-container';
 
@@ -219,7 +233,6 @@ export default class UIManager {
       }
     }
     box.appendChild(container);
-    boardEl.appendChild(box);
   }
 
   /**
@@ -419,5 +432,31 @@ export default class UIManager {
    */
   getElements() {
     return this.elements;
+  }
+
+  /**
+   * Enable or disable the Pass Turn button
+   */
+  updatePassBtn(enabled) {
+    const { passTurnBtn } = this.elements;
+    
+    if (!passTurnBtn) {
+        console.warn("Pass Turn button not found in DOM");
+        return;
+    }
+    
+    passTurnBtn.disabled = !enabled;
+    
+    if (enabled) {
+      passTurnBtn.classList.remove('btn-ghost');
+      passTurnBtn.classList.add('btn-primary');
+      passTurnBtn.style.opacity = "1";
+      passTurnBtn.style.cursor = "pointer";
+    } else {
+      passTurnBtn.classList.remove('btn-primary');
+      passTurnBtn.classList.add('btn-ghost');
+      passTurnBtn.style.opacity = "0.5";
+      passTurnBtn.style.cursor = "not-allowed";
+    }
   }
 }

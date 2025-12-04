@@ -55,77 +55,25 @@ export default class UIManager {
     };
   }
 
-  /**
-   * Hide any element by adding 'hidden' and setting display: none.
-   */
-  hide(el) {
-    if (el) { 
-      el.classList.add('hidden', 'display-none');
-    }
-  }
+  hide(el) { if (el) el.classList.add('hidden', 'display-none'); }
+  show(el) { if (el) el.classList.remove('hidden', 'display-none'); }
 
-  /**
-   * Show any element by removing 'hidden' and restoring display.
-   */
-  show(el) {
-    if (el) {
-      el.classList.remove('hidden', 'display-none');
-    }
-  }
-
-  /**
-   * Show intro screen and hide the game grid.
-   */
   showIntro() {
     const { intro, modeScreen, mainGrid, menuBtn, rollBtn, passTurnBtn } = this.elements;
-    
-    if (intro) {
-      this.show(intro);
-      intro.removeAttribute('hidden');
-    }
-    if (modeScreen) {
-      this.hide(modeScreen);
-      modeScreen.setAttribute('hidden', '');
-    }
-    if (mainGrid) {
-      mainGrid.classList.add('hidden');
-      mainGrid.classList.remove('visible');
-    }
-    this.hide(menuBtn);
-    this.hide(rollBtn);
-    
-    // FIX: Ensure Pass Button is hidden on intro
-    this.hide(passTurnBtn);
+    if (intro) { this.show(intro); intro.removeAttribute('hidden'); }
+    if (modeScreen) { this.hide(modeScreen); modeScreen.setAttribute('hidden', ''); }
+    if (mainGrid) { mainGrid.classList.add('hidden'); mainGrid.classList.remove('visible'); }
+    this.hide(menuBtn); this.hide(rollBtn); this.hide(passTurnBtn);
   }
 
-  /**
-   * Show the game grid and hide intro/mode screens.
-   */
   showGame() {
     const { intro, modeScreen, mainGrid, menuBtn, rollBtn, passTurnBtn } = this.elements;
-    
-    if (intro) {
-      this.hide(intro);
-      intro.setAttribute('hidden', '');
-    }
-    if (modeScreen) {
-      this.hide(modeScreen);
-      modeScreen.setAttribute('hidden', '');
-    }
-    if (mainGrid) {
-      mainGrid.classList.remove('hidden');
-      mainGrid.classList.add('visible');
-    }
-    this.show(menuBtn);    
-    
-    // FIX: Hide all game buttons until "Start" is clicked
-    this.hide(rollBtn);
-    this.hide(passTurnBtn);
+    if (intro) { this.hide(intro); intro.setAttribute('hidden', ''); }
+    if (modeScreen) { this.hide(modeScreen); modeScreen.setAttribute('hidden', ''); }
+    if (mainGrid) { mainGrid.classList.remove('hidden'); mainGrid.classList.add('visible'); }
+    this.show(menuBtn); this.hide(rollBtn); this.hide(passTurnBtn);
   }
 
-  /**
-   * Set the single-line status message displayed to the player(s).
-   */
   setMessage(text) {
     const { msgEl } = this.elements;
     if (!msgEl) return;
@@ -136,9 +84,6 @@ export default class UIManager {
     msgEl.appendChild(box);
   }
 
-  /**
-   * Enable/disable the roll button based on current turn and state.
-   */
   updateRollBtn(enabled) {
     const { rollBtn } = this.elements;
     if (!rollBtn) return;
@@ -146,32 +91,21 @@ export default class UIManager {
     rollBtn.setAttribute('aria-disabled', String(!enabled));
   }
 
-  /**
-   * Update board rotation (PvP only) so current player sees their side upright.
-   */
   updateBoardRotation(game) {
     const { boardEl } = this.elements;
-    if (!game || !boardEl) return;
-
+    if (!boardEl) return;
     const boardBox = boardEl.querySelector('.board-box');
-    if (!boardBox) return;
-
-    if (game.isVsPlayer && game.curPlayerIdx === 1) {
-      boardBox.classList.add('rotated');
-    } else {
-      boardBox.classList.remove('rotated');
+    if (boardBox) {
+        boardBox.style.transform = 'none';
+        boardBox.classList.remove('rotated');
     }
   }
 
-  /**
-   * Build the board DOM (cells and any pieces on them) from game state.
-   */
   buildBoard(game) {
     const { boardEl } = this.elements;
     if (!boardEl || !game) return;
     
     let box = boardEl.querySelector('.board-box');
-    
     if (!box) {
         box = document.createElement('div');
         box.className = 'board-box';
@@ -179,7 +113,6 @@ export default class UIManager {
     }
     
     box.innerHTML = '';
-
     const container = document.createElement('div');
     container.className = 'board-container';
 
@@ -188,34 +121,57 @@ export default class UIManager {
     const meSkin = (mePlayer.name === 'player1') ? 'p1' : 'p2';
     const oppSkin = (oppPlayer.name === 'player1') ? 'p1' : 'p2';
 
-    for (let r = 0; r < game.rows; r++) {
+    const currentPlayerName = game.getCurrentPlayer().name;
+    const isRotated = (currentPlayerName === 'cpu' || currentPlayerName === 'player2');
+
+    for (let vR = 0; vR < game.rows; vR++) {
       const rowDiv = document.createElement('div');
       rowDiv.className = 'board-row';
-      for (let c = 0; c < game.columns; c++) {
+      
+      for (let vC = 0; vC < game.columns; vC++) {
+        
+        let logicR = vR;
+        let logicC = vC;
+
+        if (isRotated) {
+            logicR = (game.rows - 1) - vR;
+            logicC = (game.columns - 1) - vC;
+        }
+
         const cell = document.createElement('button');
         cell.type = 'button';
         cell.className = 'board-cell';
-        cell.dataset.row = String(r);
-        cell.dataset.col = String(c);
+        cell.dataset.row = String(logicR);
+        cell.dataset.col = String(logicC);
 
-        const flowClass = (r === 0 || r === 2) ? 'flow-left' : 'flow-right';
+        const flowClass = (vR === 0 || vR === 2) ? 'flow-left' : 'flow-right';
         cell.classList.add('flow', flowClass);
 
-        if (r === 0 && c === 0) {
+        // --- ARROWS SETUP ---
+        
+        // 1. Top Left (First Row, First Cell) -> Diagonal 225
+        if (vR === 0 && vC === 0) {
           cell.classList.add('flow-diag-225');
         }
-        if (r === 1 && c === game.columns - 1) {
+        
+        // 2. Middle Right (Second Row from Top, Last Cell) -> Split Arrow
+        if (vR === 1 && vC === game.columns - 1) {
           cell.classList.add('flow-diag-right-both');
         }
-        if (r === 2 && c === 0) {
-          cell.classList.add('flow-diag-135');
+
+        // 3. Middle Left (Third Row from Top = Second from Bottom, First Cell) 
+        // -> UPDATED: Diagonal 135 (Down-Right)
+        if (vR === 2 && vC === 0) {
+          cell.classList.add('flow-diag-135'); 
         }
-        if (r === 3 && c === game.columns - 1) {
+
+        // 4. Bottom Right (Last Row, Last Cell) -> Diagonal 45
+        if (vR === 3 && vC === game.columns - 1) {
           cell.classList.add('flow-diag-45');
         }
 
-        const me = mePlayer.getPieceAt(r, c);
-        const opp = oppPlayer.getPieceAt(r, c);
+        const me = mePlayer.getPieceAt(logicR, logicC);
+        const opp = oppPlayer.getPieceAt(logicR, logicC);
 
         if (me || opp) {
           const piece = document.createElement('div');
@@ -226,7 +182,8 @@ export default class UIManager {
         rowDiv.appendChild(cell);
       }
       container.appendChild(rowDiv);
-      if (r < game.rows - 1) {
+      
+      if (vR < game.rows - 1) {
         const sep = document.createElement('div');
         sep.className = 'row-sep';
         container.appendChild(sep);
@@ -235,9 +192,6 @@ export default class UIManager {
     box.appendChild(container);
   }
 
-  /**
-   * Highlight selectable pieces and legal move targets for the current selection.
-   */
   updateBoardHighlights(game) {
     const { boardEl } = this.elements;
     if (!boardEl || !game) return;
@@ -272,23 +226,14 @@ export default class UIManager {
     }
   }
 
-  /**
-   * Set board disabled state for CPU turns
-   */
   setBoardDisabled(disabled) {
     const { boardEl } = this.elements;
     if (boardEl) {
-      if (disabled) {
-        boardEl.classList.add('disabled-board');
-      } else {
-        boardEl.classList.remove('disabled-board');
-      }
+      if (disabled) boardEl.classList.add('disabled-board');
+      else boardEl.classList.remove('disabled-board');
     }
   }
 
-  /**
-   * Enable/disable the side panel close button (and sync aria state).
-   */
   setCloseBlocked(block) {
     const { closePanelBtn } = this.elements;
     if (!closePanelBtn) return;
@@ -296,9 +241,6 @@ export default class UIManager {
     closePanelBtn.setAttribute('aria-disabled', String(!!block));
   }
 
-  /**
-   * Open the left side configuration panel.
-   */
   openSidePanel() {
     const { sidePanel, menuBtn } = this.elements;
     if (!sidePanel || !menuBtn) return;
@@ -307,9 +249,6 @@ export default class UIManager {
     setTimeout(() => sidePanel.focus(), 100);
   }
 
-  /**
-   * Close the left side configuration panel.
-   */
   closeSidePanel() {
     const { sidePanel, menuBtn } = this.elements;
     if (!sidePanel || !menuBtn) return;
@@ -317,9 +256,6 @@ export default class UIManager {
     menuBtn.innerHTML = '&#9776;';
   }
 
-  /**
-   * Update the "First Player" select options based on game mode (PvP vs PvC).
-   */
   updateFirstPlayerOptions() {
     const { gameModeInput, firstPlayerInput } = this.elements;
     if (!gameModeInput || !firstPlayerInput) return;
@@ -330,15 +266,9 @@ export default class UIManager {
 
     let options = [];
     if (selectedMode === 'pvp') {
-      options = [
-        { value: 'player1', text: 'Player 1' },
-        { value: 'player2', text: 'Player 2' }
-      ];
+      options = [{ value: 'player1', text: 'Player 1' }, { value: 'player2', text: 'Player 2' }];
     } else {
-      options = [
-        { value: 'player1', text: 'Player 1' },
-        { value: 'cpu', text: 'Computer (Player 2)' }
-      ];
+      options = [{ value: 'player1', text: 'Player 1' }, { value: 'cpu', text: 'Computer (Player 2)' }];
     }
     
     options.forEach(opt => {
@@ -348,18 +278,11 @@ export default class UIManager {
       firstPlayerInput.appendChild(optionEl);
     });
     
-    if (currentFirstPlayer === 'player1') {
-      firstPlayerInput.value = 'player1';
-    } else if (selectedMode === 'pvp' && currentFirstPlayer === 'cpu') {
-      firstPlayerInput.value = 'player2';
-    } else if (selectedMode === 'pvc' && currentFirstPlayer === 'player2') {
-      firstPlayerInput.value = 'cpu';
-    }
+    if (currentFirstPlayer === 'player1') firstPlayerInput.value = 'player1';
+    else if (selectedMode === 'pvp' && currentFirstPlayer === 'cpu') firstPlayerInput.value = 'player2';
+    else if (selectedMode === 'pvc' && currentFirstPlayer === 'player2') firstPlayerInput.value = 'cpu';
   }
 
-  /**
-   * If the scoreboard panel is open, close it and reset the button icon.
-   */
   closeScoreboardPanelIfOpen() {
     const { scoreboardPanel, scoreboardBtn } = this.elements;
     if (!scoreboardPanel) return;
@@ -367,9 +290,6 @@ export default class UIManager {
     if (scoreboardBtn) scoreboardBtn.innerHTML = '🏆';
   }
 
-  /**
-   * Ensure scoreboard panel is visible and accessible.
-   */
   hardShowScoreboard() {
     const { scoreboardPanel } = this.elements;
     if (!scoreboardPanel) return;
@@ -377,9 +297,6 @@ export default class UIManager {
     scoreboardPanel.removeAttribute('aria-hidden');
   }
 
-  /**
-   * Open scoreboard panel
-   */
   openScoreboardPanel() {
     const { scoreboardPanel, scoreboardBtn } = this.elements;
     if (scoreboardPanel) {
@@ -389,9 +306,6 @@ export default class UIManager {
     }
   }
 
-  /**
-   * Handle setting change during game
-   */
   handleSettingChange() {
     const { msgEl } = this.elements;
     if (window.game) {
@@ -406,9 +320,6 @@ export default class UIManager {
     }
   }
 
-  /**
-   * Restore message before settings change
-   */
   restoreMessageBeforeSettings() {
     if (this.lastGameMessageBeforeSettings) {
       this.setMessage(this.lastGameMessageBeforeSettings);
@@ -416,9 +327,6 @@ export default class UIManager {
     }
   }
 
-  /**
-   * Clear game UI elements for cleanup
-   */
   clearGameUI() {
     const { boardEl, sticksEl, rollBtn } = this.elements;
     if (boardEl) boardEl.innerHTML = '';
@@ -427,26 +335,12 @@ export default class UIManager {
     this.hide(sticksEl);
   }
 
-  /**
-   * Get UI elements for external access
-   */
-  getElements() {
-    return this.elements;
-  }
+  getElements() { return this.elements; }
 
-  /**
-   * Enable or disable the Pass Turn button
-   */
   updatePassBtn(enabled) {
     const { passTurnBtn } = this.elements;
-    
-    if (!passTurnBtn) {
-        console.warn("Pass Turn button not found in DOM");
-        return;
-    }
-    
+    if (!passTurnBtn) return;
     passTurnBtn.disabled = !enabled;
-    
     if (enabled) {
       passTurnBtn.classList.remove('btn-ghost');
       passTurnBtn.classList.add('btn-primary');

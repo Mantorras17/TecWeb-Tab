@@ -1,0 +1,17 @@
+{
+  "name": "tab-game-server",
+  "version": "1.0.0",
+  "description": "Node.js server for Tâb board game",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "keywords": ["tab", "board-game", "server"],
+  "author": "Hugo, Eduarda, Daniel",
+  "license": "TecWeb-Group10",
+  "dependencies": {},
+  "devDependencies": {
+    "nodemon": "^2.0.20"
+  }
+}

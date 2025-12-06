@@ -57,7 +57,7 @@
                         <select id="game-mode">
                             <option value="pvc">Player vs. Computer</option>
                             <option value="pvp">Player vs. Player</option>
-                            <option value="online">Online Multiplayer</option> </select>
+                            <option value="online">Online Multiplayer</option>
                         </select>
                         <label for="board-size">Board Size:</label>
                         <select id="board-size">
@@ -142,7 +142,9 @@
         <aside id="sticks-area">
             <div id="dice-of-sticks">
                 <button id="throw-sticks" class="btn-primary">Throw Sticks</button>
-                <div id="sticks-result"></div>
+                <canvas id="sticks-canvas" width="320" height="450" aria-label="Sticks Result">
+                    Your browser does not support HTML5 Canvas.
+                </canvas>
             </div>
         </aside>
         <div id="instructions-scrim" class="hidden" aria-hidden="true"></div>
@@ -258,7 +260,7 @@
         </div>
         <div class="scoreboard-container">
             <h2 id="scoreboard-title">ScoreBoard</h2>
-
+            
             <div id="leaderboard-content">
                 <div class="leaderboard-panel" id="leaderboard-local">
                     <table>

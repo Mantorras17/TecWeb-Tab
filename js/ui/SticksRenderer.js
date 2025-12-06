@@ -1,18 +1,29 @@
 import { TIMING } from '../constants/Constants.js';
 
-/**
- * Handles stick throwing animation, rendering, and timing
- */
 export default class SticksRenderer {
   constructor(uiManager) {
     this.uiManager = uiManager;
     this.busy = false;
     this.queue = [];
+    this.animationId = null;
+
+    // --- PRELOAD IMAGES ---
+    this.imgLight = new Image();
+    this.imgLight.src = 'img/lightpiece.jpg';
+    
+    this.imgDark = new Image();
+    this.imgDark.src = 'img/darkpiece.jpg';
+
+    this.imagesLoaded = false;
+    let loadedCount = 0;
+    const checkLoad = () => {
+        loadedCount++;
+        if (loadedCount >= 2) this.imagesLoaded = true;
+    };
+    this.imgLight.onload = checkLoad;
+    this.imgDark.onload = checkLoad;
   }
 
-  /**
-   * Queue a callback to run after the sticks animation (or run now if idle).
-   */
   queueAfterFlip(cb, delay = 0) {
     if (!this.busy) {
       setTimeout(cb, delay);
@@ -21,116 +32,176 @@ export default class SticksRenderer {
     this.queue.push(() => setTimeout(cb, delay));
   }
 
-  /**
-   * Queue a message update to run after the sticks animation.
-   */
   msgAfterFlip(text, delay = 0) {
     this.queueAfterFlip(() => this.uiManager.setMessage(text), delay);
   }
 
-  /**
-   * Reset the stick display to neutral (grey/inactive) after a delay.
-   */
   sticksToGrey(delayMs = 0) {
     setTimeout(() => this.renderSticks(null, { force: true, animate: false }), delayMs);
   }
 
+  getCanvas() {
+    const canvas = document.getElementById('sticks-canvas');
+    if (!canvas) return null;
+    return {
+      canvas,
+      ctx: canvas.getContext('2d'),
+      width: canvas.width,
+      height: canvas.height
+    };
+  }
+
   /**
-   * Render the sticks (neutral or showing a roll) and animate if requested.
+   * Draws a single stick with horizontal rotation
    */
-  renderSticks(valueOrResult, opts = {}) {
-    const sticksEl = this.uiManager.getElements().sticksEl;
-    if (!sticksEl) return;
+  drawStick(ctx, x, y, w, h, type, rotationAngle = 0) {
+    // rotationAngle: 0 = Flat. Math.PI = 1 full flip.
     
-    this.uiManager.show(sticksEl);
+    // --- CHANGE 1: Calculate Scale based on X axis ---
+    const scaleX = Math.cos(rotationAngle);
+    const isBackside = scaleX < 0;
+    
+    let currentImg;
+    if (rotationAngle !== 0) {
+        // While spinning, swap textures based on flip side
+        currentImg = isBackside ? this.imgDark : this.imgLight;
+    } else {
+        // Static state
+        currentImg = (type === 1) ? this.imgLight : this.imgDark;
+    }
+
+    ctx.save();
+    
+    // Translate to center of stick for rotation
+    ctx.translate(x + w / 2, y + h / 2);
+
+    // --- CHANGE 2: Apply Scale to X instead of Y ---
+    // (scaleX, 1) creates the horizontal flipping effect
+    ctx.scale(Math.abs(scaleX), 1); 
+    
+    // Draw coordinates relative to center
+    const drawX = -w / 2;
+    const drawY = -h / 2;
+    
+    ctx.beginPath();
+    const radius = 18; 
+    if (ctx.roundRect) {
+        ctx.roundRect(drawX, drawY, w, h, radius);
+    } else {
+        ctx.rect(drawX, drawY, w, h);
+    }
+    ctx.closePath();
+    ctx.clip();
+
+    if (this.imagesLoaded) {
+        ctx.drawImage(currentImg, drawX, drawY, w, h);
+    } else {
+        ctx.fillStyle = (type === 1) ? '#f4e2be' : '#3b2b22';
+        ctx.fillRect(drawX, drawY, w, h);
+    }
+
+    if (type === -1) {
+         ctx.fillStyle = 'rgba(50, 50, 50, 0.7)';
+         ctx.fillRect(drawX, drawY, w, h);
+    }
+
+    ctx.strokeStyle = '#351a1a';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  drawScene(sticks, labelText, rotationAngle = 0) {
+    const data = this.getCanvas();
+    if (!data) return;
+    const { ctx, width, height } = data;
+
+    ctx.clearRect(0, 0, width, height);
+
+    const stickW = 60; 
+    const stickH = 390; 
+    const gap = 15;
+    const totalW = (stickW * 4) + (gap * 3);
+    const startX = (width - totalW) / 2;
+    const startY = 10; 
+
+    sticks.forEach((val, i) => {
+        const x = startX + (i * (stickW + gap));
+        const individualAngle = rotationAngle + (i * 0.3); 
+        this.drawStick(ctx, x, startY, stickW, stickH, val, rotationAngle === 0 ? 0 : individualAngle);
+    });
+
+    if (labelText) {
+        ctx.font = 'bold 22px "Segoe UI", sans-serif';
+        ctx.fillStyle = '#3b2b22';
+        ctx.textAlign = 'center';
+        ctx.fillText(labelText, width / 2, startY + stickH + 40);
+    }
+  }
+
+  renderSticks(valueOrResult, opts = {}) {
+    const data = this.getCanvas();
+    if (!data) return;
+
+    if (this.uiManager && this.uiManager.getElements().sticksEl) {
+        this.uiManager.show(this.uiManager.getElements().sticksEl);
+    }
+
     const force = opts.force === true;
     const animate = opts.animate !== false;
 
     if (this.busy && !force) return;
 
-    sticksEl.innerHTML = '';
-
-    const hasValue =
-      typeof valueOrResult === 'number' ||
-      (valueOrResult && valueOrResult.value != null);
-
-    if (!hasValue) {
-      const strip = document.createElement('div');
-      strip.className = 'stick-strip';
-      for (let i = 0; i < 4; i++) {
-        const img = document.createElement('img');
-        img.className = 'stick-img inactive';
-        img.src = 'img/darkpiece.jpg';
-        strip.appendChild(img);
-      }
-      const label = document.createElement('div');
-      label.className = 'sticks-label';
-      sticksEl.appendChild(strip);
-      sticksEl.appendChild(label);
-      return;
+    if (this.animationId) {
+        cancelAnimationFrame(this.animationId);
+        this.animationId = null;
     }
 
-    this.busy = animate;
+    const hasValue = typeof valueOrResult === 'number' || (valueOrResult && valueOrResult.value != null);
+    if (!hasValue) {
+        this.drawScene([-1, -1, -1, -1], ""); 
+        return;
+    }
 
-    const value = typeof valueOrResult === 'number'
-      ? valueOrResult
-      : valueOrResult.value;
-
-    const faces =
-      typeof valueOrResult === 'object' && valueOrResult.sticks
+    const value = typeof valueOrResult === 'number' ? valueOrResult : valueOrResult.value;
+    const finalSticks = (typeof valueOrResult === 'object' && valueOrResult.sticks)
         ? valueOrResult.sticks
-        : window.game?.lastSticks?.length
-        ? window.game.lastSticks
-        : [0, 0, 0, 0];
+        : (window.game?.lastSticks?.length ? window.game.lastSticks : [0, 0, 0, 0]);
 
-    const strip = document.createElement('div');
-    strip.className = 'stick-strip';
+    const labelText = (value === 1) ? `${value} move` : `${value} moves`;
 
-    faces.forEach(() => {
-      const img = document.createElement('img');
-      img.className = 'stick-img inactive';
-      img.src = 'img/darkpiece.jpg';
-      if (animate) {
-        img.classList.add('animating');
-      }
-      strip.appendChild(img);
-    });
+    if (!animate) {
+        this.drawScene(finalSticks, labelText, 0);
+        return;
+    }
 
-    const label = document.createElement('div');
-    label.className = 'sticks-label';
-    label.innerHTML = animate ? '<i>Rolling...</i>' : `&rarr; <b>${value}</b>`;
+    this.busy = true;
+    const startTime = performance.now();
+    const duration = 2000; 
 
-    sticksEl.appendChild(strip);
-    sticksEl.appendChild(label);
-
-    const reveal = () => {
-      strip.innerHTML = '';
-      faces.forEach((v) => {
-        const img = document.createElement('img');
-        img.className = 'stick-img ' + (v === 1 ? 'light' : 'dark') + ' active';
-        img.alt = v === 1 ? 'Flat side (light)' : 'Round side (dark)';
-        img.src = v === 1 ? 'img/lightpiece.jpg' : 'img/darkpiece.jpg';
-        strip.appendChild(img);
-      });
-      
-      if (value === 1) {
-        label.innerHTML = `<b>${value} move</b>`;
-      } else {
-        label.innerHTML = `<b>${value} moves</b>`;
-      }
-      
-      this.busy = false;
-      const tasks = this.queue.splice(0, this.queue.length);
-      tasks.forEach(fn => fn());
+    const loop = (time) => {
+        const elapsed = time - startTime;
+        
+        if (elapsed < duration) {
+            // Spin speed controlled here (700 = slow/heavy)
+            const angle = (elapsed / 400) * Math.PI; 
+            
+            this.drawScene([0, 0, 0, 0], "Rolling...", angle);
+            this.animationId = requestAnimationFrame(loop);
+        } else {
+            this.drawScene(finalSticks, labelText, 0);
+            this.busy = false;
+            this.animationId = null;
+            
+            const tasks = this.queue.splice(0, this.queue.length);
+            tasks.forEach(fn => fn());
+        }
     };
 
-    if (animate) setTimeout(reveal, TIMING.flipAnimMs);
-    else reveal();
+    this.animationId = requestAnimationFrame(loop);
   }
 
-  /**
-   * Check if sticks are currently busy animating
-   */
   isBusy() {
     return this.busy;
   }

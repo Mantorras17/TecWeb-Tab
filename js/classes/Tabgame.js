@@ -201,16 +201,14 @@ export default class TabGame {
     }
 
     const coords = Array.from(frontier).map(id => graph.idToCoord(id));
-    const filtered = coords.filter(({ row, col }) => {
+    return coords.filter(({ row, col }) => {
       const occ = this.isCellOccupied(row, col);
       const blocked = (occ && occ.owner === 'me');
-
       if (row === lastLine && piece.isCurrentlyInLastRow()) {
         if (!piece.canMoveInLastRow()) return false;
       }
       return !blocked;
     });
-    return filtered;
   }
 
 
@@ -241,7 +239,19 @@ export default class TabGame {
    * @param {number} row
    * @param {number} col
    * @returns {{row:number,col:number}[]} The legal destinations.
+
+   * MISSING METHOD FIXED HERE
+   * Checks if current player has moves. If not, resolves turn (Pass or Extra Turn).
    */
+  autoSkipIfNoMoves() {
+    if (this.hasAnyLegalMove()) return false;
+
+    // No moves available
+    const keepTurn = this.playAgain(); // If 1, 4, 6, they get to roll again even with no moves
+    this.endTurn(keepTurn);
+    return true;
+  }
+
   selectPieceAt(row, col) {
     const piece = this.getCurrentPlayer().getPieceAt(row, col);
     if (!piece) return [];
@@ -379,7 +389,9 @@ export default class TabGame {
     
     // CPU Must Auto-Pass if no moves
     if (legalMoves.length === 0) {
-      this.endTurn(false);
+      // Should be handled by autoSkip, but safeguard:
+      const keepTurn = this.playAgain();
+      this.endTurn(keepTurn);
       return true;
     }
 
@@ -402,7 +414,8 @@ export default class TabGame {
     
     // CPU Must Auto-Pass if no moves
     if (legalMoves.length === 0) {
-      this.endTurn(false);
+      const keepTurn = this.playAgain();
+      this.endTurn(keepTurn);
       return true;
     }
 
@@ -425,11 +438,7 @@ export default class TabGame {
       }
     }
     
-    if (bestMoves.length === 0) {
-         if (legalMoves.length > 0) return this.cpuMoveRandom();
-         this.endTurn(false);
-         return true;
-    }
+    if (bestMoves.length === 0) return this.cpuMoveRandom();
 
     const { piece, move } = bestMoves[Math.floor(Math.random() * bestMoves.length)];
     this.selectedPiece = piece;
@@ -542,7 +551,8 @@ export default class TabGame {
   cpuMoveMinimax() {
     const legalMoves = this.getAllLegalMoves();
     if (legalMoves.length === 0) {
-      this.endTurn(false);
+      const keepTurn = this.playAgain();
+      this.endTurn(keepTurn);
       return true;
     }
     let bestScore = -Infinity;

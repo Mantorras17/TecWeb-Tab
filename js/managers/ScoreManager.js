@@ -29,7 +29,6 @@ export default class ScoreManager {
 
     scoreboardBody.innerHTML = '';
 
-    // Mostrar sempre as 3 linhas base
     const stats = [
       { name: 'Player 1', ...this.scores.player1 },
       { name: 'Player 2', ...this.scores.player2 },

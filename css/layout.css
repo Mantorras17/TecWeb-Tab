@@ -106,24 +106,106 @@
   max-width: 800px;
 }
 
-/* Responsive adjustments for layout */
-@media (max-width: 900px) {
+/* --- FINAL FIXED LAYOUT (Paste at bottom of layout.css) --- */
+
+@media (max-width: 1600px) {
+  
+  /* 1. LAYOUT GRID */
   #main-grid {
-    grid-template-columns: minmax(0, 1.5fr) minmax(0, 4fr) minmax(0, 1fr);
-    grid-template-rows: 8vh 5vh 1fr minmax(120px, 18vh);
+    display: grid !important;
+    /* Columns: Tiny Left Gap | Board Area | Sticks Area */
+    grid-template-columns: 20px minmax(0, 3fr) minmax(0, 1.2fr) !important;
+    grid-template-rows: auto auto 1fr auto !important;
+    grid-template-areas:
+        "sidePanel header login-area"
+        "sidePanel messages ."
+        "sidePanel main-content sticks-area"
+        "sidePanel scoreboard-area scoreboard-area" !important;
+    overflow-x: hidden;
+    padding-bottom: 120px !important; /* Huge bottom padding for the button */
+    height: auto !important;
+    min-height: 100vh;
+  }
+
+  /* 2. FORCE BOARD TO TOP-LEFT (Override board.css) */
+  #main-content {
+    display: block !important; /* Stop Flex centering */
+    grid-area: main-content;
+    z-index: 1 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  #board {
+    width: 100% !important;
+    margin: 0 !important;
+    display: block !important;
+  }
+
+  /* STRONG SELECTOR to kill the 8vh margin */
+  #main-grid #board .board-box {
+    margin: 10px 0 0 0 !important; /* Top: 10px, Left: 0 */
+    transform-origin: top left !important;
+    transform: scale(0.85) !important; /* Shrink to fit */
+    width: auto !important;
+    max-width: 100% !important;
+  }
+
+  /* 3. STICKS ON THE RIGHT */
+  #sticks-area {
+    grid-area: sticks-area;
+    width: 100% !important;
+    max-width: 280px;
+    margin-top: 10px !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 10 !important; /* Above board */
+    pointer-events: none;   /* Click-through */
+  }
+
+  #sticks-result, #sticks-canvas {
+    width: 100% !important;
+    height: auto !important;
+    transform: none !important;
+  }
+
+  #throw-sticks {
+    width: 90% !important;
+    max-width: 180px;
+    font-size: 0.9rem;
+    padding: 8px;
+    white-space: nowrap;
+    position: relative;
+    z-index: 10000 !important;
+    pointer-events: auto;
+    cursor: pointer;
+    margin-bottom: 10px;
+  }
+
+  /* 4. PASS TURN BUTTON - STICKY FOOTER */
+  #pass-turn {
+    position: fixed !important;
+    bottom: 20px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    z-index: 2147483647 !important; /* Maximum Z-Index */
+    min-width: 220px;
+    background-color: #4c3629;
+    color: #fff;
+    box-shadow: 0 0 20px rgba(0,0,0,0.8), 0 0 0 3px rgba(255,255,255,0.3) !important;
   }
 }
 
-@media (max-width: 600px) {
+/* Mobile Fallback (Stacking) */
+@media (max-width: 800px) {
   #main-grid {
-    grid-template-columns: 1fr;
-    grid-template-rows: 8vh 5vh 1fr minmax(120px, 18vh) auto;
-    grid-template-areas:
-      "header"
-      "login-area"
-      "messages"
-      "main-content"
-      "sticks-area"
-      "scoreboard-area";
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
   }
+  #main-content { margin-top: 20px !important; }
+  #board .board-box { transform-origin: top center !important; margin: 0 auto !important; }
+  #sticks-area { max-width: 100% !important; order: 3; pointer-events: auto; }
 }

@@ -122,7 +122,12 @@ export default class UIManager {
     const oppSkin = (oppPlayer.name === 'player1') ? 'p1' : 'p2';
 
     const currentPlayerName = game.getCurrentPlayer().name;
-    const isRotated = (currentPlayerName === 'cpu' || currentPlayerName === 'player2');
+    
+    // --- FIX START ---
+    // We removed 'cpu' from here. Now the board only rotates for Player 2 (PvP).
+    // The CPU will always see the board from the standard (Player 1) perspective.
+    const isRotated = (currentPlayerName === 'player2');
+    // --- FIX END ---
 
     for (let vR = 0; vR < game.rows; vR++) {
       const rowDiv = document.createElement('div');
@@ -148,24 +153,15 @@ export default class UIManager {
         cell.classList.add('flow', flowClass);
 
         // --- ARROWS SETUP ---
-        
-        // 1. Top Left (First Row, First Cell) -> Diagonal 225
         if (vR === 0 && vC === 0) {
           cell.classList.add('flow-diag-225');
         }
-        
-        // 2. Middle Right (Second Row from Top, Last Cell) -> Split Arrow
         if (vR === 1 && vC === game.columns - 1) {
           cell.classList.add('flow-diag-right-both');
         }
-
-        // 3. Middle Left (Third Row from Top = Second from Bottom, First Cell) 
-        // -> UPDATED: Diagonal 135 (Down-Right)
         if (vR === 2 && vC === 0) {
           cell.classList.add('flow-diag-135'); 
         }
-
-        // 4. Bottom Right (Last Row, Last Cell) -> Diagonal 45
         if (vR === 3 && vC === game.columns - 1) {
           cell.classList.add('flow-diag-45');
         }

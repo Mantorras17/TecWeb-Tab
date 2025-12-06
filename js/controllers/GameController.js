@@ -1,5 +1,6 @@
 import TabGame from '../classes/Tabgame.js';
 import Piece from '../classes/Piece.js';
+import ScoreManager from '../managers/ScoreManager.js';
 import { TIMING, DIFFICULTY_LEVELS, ROLL_NAMES } from '../constants/Constants.js';
 
 /**
@@ -13,6 +14,8 @@ export default class GameController {
     this.scoreManager = scoreManager;
     this.modalManager = modalManager;
     this.serverManager = serverManager;
+    this.scoreManager = new ScoreManager(this.uiManager, this.serverManager);
+    this.uiManager.scoreManager = this.scoreManager;
     this.game = null;
     this.messageTimer = null;
   }
@@ -58,11 +61,10 @@ export default class GameController {
             this.uiManager.closeSidePanel();
             this.uiManager.setMessage(`Joined! Waiting... (${joinData.game})`);
             
-            // Inicia a escuta de eventos
-            this.serverManager.startListening(nick, joinData.game, 
-                (data) => this.handleServerUpdate(data),
-                (err) => console.error("SSE Error", err)
-            );
+            this.serverManager.update(this.serverManager.state.gameId, nick, (data) => {
+            this.handleServerUpdate(data);
+            });
+
         } catch (err) {
             this.uiManager.setMessage("Error: " + err.message);
         }
@@ -134,13 +136,26 @@ export default class GameController {
         window.game = this.game;
         this.game.isOnline = true;
         
-        this.game.players[0].name = myNick; 
+        // Descobrir a minha cor baseada no objeto players do servidor
+        // Ex: data.players = { "Joao": "Blue", "Maria": "Red" }
+        const myColor = data.players ? data.players[myNick] : "Blue";
+        const amIPlayer1 = (myColor === "Blue"); // Player 1 é Azul
+
+        // Configurar 'Eu' (players[0])
+        this.game.players[0].name = myNick;
+        this.game.players[0].skin = amIPlayer1 ? 'blue' : 'red';
+        this.game.players[0].startRow = amIPlayer1 ? 3 : 0; // Se sou Red, começo em cima (0)
+
+        // Configurar 'Oponente' (players[1])
         const opponentName = Object.keys(data.players || {}).find(n => n !== myNick) || "Opponent";
         this.game.players[1].name = opponentName;
-        
-        this.serverManager.state.color = data.players ? data.players[myNick] : "Blue";
+        this.game.players[1].skin = amIPlayer1 ? 'red' : 'blue';
+        this.game.players[1].startRow = amIPlayer1 ? 0 : 3;
+
+        this.serverManager.state.color = myColor;
 
         this.uiManager.show(this.uiManager.getElements().rollBtn);
+        this.uiManager.show(this.uiManager.getElements().passTurnBtn);
         this.uiManager.hardShowScoreboard();
         this.sticksRenderer.renderSticks(null);
         this.renderAll();
@@ -155,9 +170,8 @@ export default class GameController {
 
         data.pieces.forEach((p, index) => {
             if (!p) return;
-            const coords = this.getCoordsFromIndex(index, this.game.columns);
-            
-            let owner = (p.color === this.serverManager.state.color) ? this.game.players[0] : this.game.players[1];
+            const coords = this.getCoordsFromIndex(index, this.game.columns); 
+            const owner = (p.color === this.serverManager.state.color) ? this.game.players[0] : this.game.players[1];
             
             const newPiece = new Piece(owner, coords.row, coords.col);
             if (p.reachedLastRow) newPiece.state = 'last-row';
@@ -171,27 +185,50 @@ export default class GameController {
       // 3. Turno
       if (data.turn) {
         const elements = this.uiManager.getElements();
-        if (data.turn === myNick) {
-            this.uiManager.setMessage("Your Turn!");
-            this.game.curPlayerIdx = 0; 
-            this.uiManager.updateRollBtn(this.game.stickValue == null); // Ativa se ainda não rolou
-        } else {
-            this.uiManager.setMessage(`Waiting for ${data.turn}...`);
-            this.game.curPlayerIdx = 1;
-            this.uiManager.updateRollBtn(false);
-        }
+        const isMyTurn = data.turn === myNick;
+          // Reset de estado local para o novo turno
+          this.game.stickValue = null;
+          this.game.waitingForPass = false;
+          this.game.curPlayerIdx = this.game.players.findIndex(p => p.name === data.turn);
+        
+          // ONLINE: botões controlados exclusivamente pelo servidor
+          if (this.game.isOnline) {
+            this.uiManager.updateRollBtn(isMyTurn);
+            this.uiManager.updatePassBtn(isMyTurn && data.mustPass === myNick);
+            this.uiManager.setBoardDisabled(!isMyTurn);
+            this.uiManager.setMessage(isMyTurn ? "Your Turn!" : `Waiting for ${data.turn}...`);
+          } else {
+            // OFFLINE: PvP ou PvC mantém lógica local
+            const canRoll = (this.game.stickValue == null);
+            this.uiManager.updateRollBtn(canRoll);
+            const hasMoves = this.hasAnyValidMoves();
+            const shouldEnablePass = (!canRoll && !hasMoves);
+            this.uiManager.updatePassBtn(shouldEnablePass);
+          }
       }
+
       
       // 4. Dados
       if (data.dice && data.dice.value) {
         this.game.stickValue = data.dice.value;
         this.sticksRenderer.renderSticks(data.dice.value, { animate: true });
+
+         // ONLINE: ATIVAR PASS DE IMEDIATO SE O ROLL É 2 OU 3 
+        const elements = this.uiManager.getElements();
+
+        if (this.game.isOnline) {
+          // controlar botões via servidor
+          const elements = this.uiManager.getElements();
+          this.uiManager.show(elements.passTurnBtn);
+          const mustPassForMe = data.mustPass === myNick;
+          this.uiManager.updatePassBtn(mustPassForMe);
+        }
       }
       
       // 5. Vencedor
       if (data.winner) {
         this.handleGameOver({ name: data.winner });
-        this.serverManager.stopListening();
+        this.serverManager.closeUpdate();
       }
   }
 
@@ -266,6 +303,7 @@ export default class GameController {
           this.uiManager.setMessage(`You rolled a ${val} (Bonus) but have no moves. Throw again!`);
           // Reset ao valor para permitir lançar outra vez
           this.game.endTurn(true);
+          this.game.waitingForPass = false;
           this.renderAll({ updateSticks: false });
           return;
         }
@@ -316,39 +354,67 @@ export default class GameController {
    * Handle board cell click
    */
   handleBoardClick(row, col) {
-    // ONLINE
     if (row == null || col == null) {
       console.error("Row or col is undefined!", row, col);
       return;
     }
     if (this.game && this.game.isOnline) {
-      if (this.serverManager.state.nick !== this.game.getCurrentPlayer().name) {
+      const { nick, pass, gameId } = this.serverManager.state;
+      const currentPlayer = this.game.getCurrentPlayer();
+
+      // Check turn
+      if (nick !== currentPlayer.name) {
           this.uiManager.setMessage("Not your turn!");
           return;
       }
-      
-      // Lógica de seleção visual local
-      const pieceAtClick = this.game.getCurrentPlayer().getPieceAt(row, col);
-      if (pieceAtClick) {
-          if (this.game.selectedPiece === pieceAtClick) this.game.clearSelection();
-          else this.game.selectPieceAt(row, col);
-          this.uiManager.updateBoardHighlights(this.game);
-      } else if (this.game.selectedPiece) {
-          // Mover: Envia ao servidor
-          const cellIndex = this.getIndexFromCoords(row, col, this.game.columns);
-          const { nick, pass, gameId } = this.serverManager.state;
-          
-          console.log("Clicked cell:", row, col, "Columns:", this.game.columns);
-          console.log("Computed cellIndex:", cellIndex);
 
-          this.serverManager.notify(nick, pass, gameId, cellIndex)
+      const cellIndex = this.getIndexFromCoords(row, col, this.game.columns);
+      if (cellIndex < 0) return;
+
+      // ----------------- STEP: FROM -----------------
+      if (this.serverManager.state.step === "from") {
+        const piece = currentPlayer.getPieceAt(row, col);
+
+        if (!piece) {
+            this.uiManager.setMessage("Select a valid piece.");
+            return;
+        }
+
+        // highlight local
+        this.game.selectPieceAt(row, col);
+        this.uiManager.updateBoardHighlights(this.game);
+
+        console.log("NOTIFY FROM:", cellIndex);
+
+        this.serverManager.notify(nick, pass, gameId, cellIndex)
             .catch(err => this.uiManager.setMessage("Error: " + err.message));
-          
-          this.game.clearSelection();
-          this.uiManager.updateBoardHighlights(this.game);
+
+        return;
       }
+
+      // ----------------- STEP: TO -----------------
+      if (this.serverManager.state.step === "to") {
+
+        if (!this.game.selectedPiece) {
+            this.uiManager.setMessage("Select a piece first.");
+            return;
+        }
+
+        console.log("NOTIFY TO:", cellIndex);
+
+        this.serverManager.notify(nick, pass, gameId, cellIndex)
+            .catch(err => this.uiManager.setMessage("Error: " + err.message));
+
+        // Clear highlight (server envia update com a nova board)
+        this.game.clearSelection();
+        this.uiManager.updateBoardHighlights(this.game);
+
+        return;
+      }
+
       return;
     }
+
     if (!this.game || this.game.over) return;
     
     const currentPlayer = this.game.getCurrentPlayer();
@@ -378,10 +444,7 @@ export default class GameController {
       this.game.selectPieceAt(row, col);
       this.uiManager.updateBoardHighlights(this.game);
     } else {
-      if (!this.game.selectedPiece) {
-        return;
-      }
-      
+      if (this.game.selectedPiece) {
       const moveWasSuccessful = this.game.moveSelectedTo(row, col);
       if (moveWasSuccessful) {
         this.game.stickValue = null;  // permite novo roll no próximo turno
@@ -409,6 +472,7 @@ export default class GameController {
             this.uiManager.setMessage(`${nextPlayer.name === P1_name ? 'Player 1' : 'Player 2'}, your turn!`);
           }
         }
+      }
       }
     }
   }
@@ -448,13 +512,17 @@ export default class GameController {
   canPlayerRoll() {
     if (!this.game) return false;
     if (this.sticksRenderer.isBusy()) return false;
-    
-    if (this.game.waitingForPass) return false;
 
-    const cur = this.game.getCurrentPlayer();
-    if (!cur) return false;
-    if (cur.name === 'cpu') return false;
-    return this.game.stickValue == null;
+    const currentPlayer = this.game.getCurrentPlayer();
+    if (!currentPlayer) return false;
+    if (currentPlayer.name === 'cpu') return false;
+
+    // BONUS ROLL: se stickValue é 1,4,6 e ainda não houve movimento
+    const bonusRollAllowed = this.game.stickValue !== null && [1,4,6].includes(this.game.stickValue) && !this.hasAnyValidMoves();
+
+    if (this.game.waitingForPass && !bonusRollAllowed) return false;
+
+    return this.game.stickValue == null || bonusRollAllowed;
   }
 
   /**
@@ -483,7 +551,6 @@ export default class GameController {
     const isCpu = this.game.getCurrentPlayer().name === 'cpu';
     const hasMoves = this.hasAnyValidMoves(); 
     const sticksThrown = this.game.stickValue !== null;
-
     const canPass = ((sticksThrown && !hasMoves) || this.game.waitingForPass) && !isCpu;
     
     this.uiManager.updatePassBtn(canPass); 
@@ -491,7 +558,16 @@ export default class GameController {
     const currentPlayer = this.game.getCurrentPlayer();
     const isCpuTurn = (currentPlayer.name === 'cpu' && !this.game.isVsPlayer);
     this.uiManager.setBoardDisabled(isCpuTurn);
-    this.uiManager.updateBoardRotation(this.game);
+    // ROTAÇÃO NO ONLINE 
+    // Se sou Vermelho (P2, startRow=0), tenho de rodar o tabuleiro para ver o meu lado em baixo.
+    // Se sou Azul (P1, startRow=3), não rodo (startRow=3 já é em baixo).
+    let forceRotate = false;
+    if (this.game.isOnline) {
+        // Se o meu startRow é 0, preciso de rodar
+        forceRotate = (this.game.players[0].startRow === 0);
+    }
+    
+    this.uiManager.updateBoardRotation(this.game, forceRotate);
   }
 
   /**
@@ -529,7 +605,7 @@ export default class GameController {
     if (elements.rollBtn) elements.rollBtn.disabled = true;
     this.uiManager.setBoardDisabled(true);
     this.uiManager.hide(elements.sticksEl);
-    this.uiManager.openScoreboardPanel();
+    this.openScoreboardPanel();
 
     setTimeout(() => {
       this.cleanupGame();
@@ -537,7 +613,7 @@ export default class GameController {
       this.uiManager.openSidePanel();
       this.uiManager.setMessage('Choose the configurations and click "Start" to play the game.');
       this.uiManager.setCloseBlocked(true);
-      this.uiManager.openScoreboardPanel();
+      this.openScoreboardPanel();
     }, TIMING.gameOverCleanupMs);
   }
 
@@ -573,50 +649,19 @@ export default class GameController {
   /**
    * Handle manual pass turn
    */
-  handlePassTurn() {
-    if (!this.game || this.game.over) return;
-    
-    const currentPlayer = this.game.getCurrentPlayer();
-    
-    // Safety check: CPU shouldn't click buttons
-    if (currentPlayer.name === 'cpu') return;
+  async handlePassTurn() {
+    if (!this.game || !this.game.isOnline) return;
 
-    // --- FIX: USE CURRENT ON-SCREEN VALUE ---
-    // We use stickValue because it is the active roll that caused us to be stuck.
-    // We fallback to lastStickValue just in case.
-    const currentRoll = this.game.stickValue || this.game.lastStickValue;
-    
-    console.log("Pass Clicked. Roll was:", currentRoll);
+    const { nick, pass, gameId } = this.serverManager.state;
+    this.uiManager.updatePassBtn(false);
+    this.uiManager.updateRollBtn(false);
+    this.uiManager.setMessage("Passing turn...");
 
-    // Explicitly check for bonus numbers (1, 4, 6)
-    const isBonusRoll = [1, 4, 6].includes(currentRoll);
-
-    // If isBonusRoll is TRUE, we force the game to keep the current player.
-    this.game.endTurn(isBonusRoll); 
-
-    // Update the UI
-    this.renderAll({ updateSticks: true }); 
-
-    if (isBonusRoll) {
-        // CASE: You rolled 1, 4, or 6. You keep the turn!
-        this.uiManager.setMessage(`You rolled a ${currentRoll} (Bonus)! Throw sticks again.`);
-        console.log("KEEPING TURN - Player should NOT change");
-    } else {
-        // CASE: You rolled 2 or 3. Turn ends.
-        this.uiManager.setMessage("Turn passed.");
-        console.log("PASSING TURN - Player switching");
-        
-        const nextPlayer = this.game.getCurrentPlayer();
-        
-        if (nextPlayer.name === 'cpu') {
-            this.uiManager.setMessage("Player 2's turn.");
-            this.sticksRenderer.queueAfterFlip(() => {
-                this.cpuController.maybeCpuTurn(this.game, false);
-            }, 1000);
-        } else {
-            const display = nextPlayer.name === 'player1' ? 'Player 1' : 'Player 2';
-            this.uiManager.setMessage(`${display}, your turn!`);
-        }
+    try {
+      await this.serverManager.pass(nick, pass, gameId);
+    } catch (err) {
+      console.error("Erro ao passar turno:", err);
+      this.uiManager.setMessage("Server refused PASS.");
     }
   }
 
@@ -631,5 +676,42 @@ export default class GameController {
     }
     
     return false;
+  }
+
+  openScoreboardPanel() {
+    // Abre o painel visual
+    this.uiManager.openScoreboardPanel();
+
+    // Carrega offline primeiro
+    this.loadOfflineScores();
+
+    // Liga tabs para trocar entre Offline / Online
+    this.uiManager.setupScoreboardTabs(
+        () => this.loadOfflineScores(),
+        () => this.loadOnlineScores()
+    );
+  }
+
+  // SCOREBOARD ONLINE 
+  async loadOnlineScores() {
+      try {
+          const size = this.game ? this.game.columns : 7; // fallback para evitar crashes
+          const ranking = await this.serverManager.ranking(
+              this.serverManager.GROUP_ID,
+              size
+          );
+          this.uiManager.renderOnlineScoreboard(ranking);
+      } catch (err) {
+          this.uiManager.setMessage("Erro ao carregar ranking online.");
+          console.error(err);
+      }
+  }
+
+  // SCOREBOARD OFFLINE
+  loadOfflineScores() {
+      if (!this.scoreManager) return;
+
+      const scores = this.scoreManager.getOfflineScores();
+      this.uiManager.renderOfflineScoreboard(scores);
   }
 }

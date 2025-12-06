@@ -51,7 +51,7 @@ export default class ServerManager {
     // ------------------ JOIN GAME ------------------
 
     async join(group, nick, password, size) {
-        const data = { group, nick, password, size };
+        const data = { group, nick, password, size }
         const result = await this.request("join", data);
 
         if (!result.game) throw new Error("Join falhou – sem game ID");
@@ -66,41 +66,44 @@ export default class ServerManager {
 
     // ------------------ SSE - UPDATE ------------------
 
-    startListening(nick, gameId, onMessage, onError) {
-        this.stopListening(); // Fecha anterior
+update(game, nick, onMessage) {
+    // Fecha qualquer ligação anterior
+    this.closeUpdate();
 
-        const url =
-            `${this.SERVER_URL}update?nick=${encodeURIComponent(nick)}&game=${encodeURIComponent(gameId)}`;
+    const url =
+        `${this.SERVER_URL}update?game=${encodeURIComponent(game)}&nick=${encodeURIComponent(nick)}`;
 
-        this.state.eventSource = new EventSource(url);
+    const eventSource = new EventSource(url);
+    this.state.eventSource = eventSource;
 
-        this.state.eventSource.onmessage = (event) => {
-            if (!event.data) return;
+    eventSource.onmessage = (event) => {
+        if (!event.data) return;
+        try {
+            const data = JSON.parse(event.data);
 
-            // Cada linha pode ser um JSON separado
-            const lines = event.data.trim().split("\n");
-            for (const line of lines) {
-                try {
-                    const data = JSON.parse(line);
-                    onMessage(data);
-                } catch (e) {
-                    console.error("Erro a processar update SSE:", e, line);
-                }
-            }
-        };
+            // O GUIÃO diz que o servidor envia step, turn, pieces.
+            if (data.step) this.state.step = data.step;
+            if (data.turn) this.state.turn = data.turn;
+            if (data.pieces) this.state.pieces = data.pieces;
 
-        this.state.eventSource.onerror = (error) => {
-            console.error("Erro SSE:", error);
-            if (onError) onError(error);
-        };
-    }
-
-    stopListening() {
-        if (this.state.eventSource) {
-            this.state.eventSource.close();
-            this.state.eventSource = null;
+            if (onMessage) onMessage(data);
+        } catch (e) {
+            console.error("Erro a processar SSE:", e);
         }
+    };
+
+    eventSource.onerror = (error) => {
+        console.error("Erro SSE (game inválido?):", error);
+    };
+}
+
+closeUpdate() {
+    if (this.state.eventSource) {
+        this.state.eventSource.close();
+        this.state.eventSource = null;
     }
+}
+
 
     // ------------------ SERVER COMMANDS ------------------
 
@@ -112,12 +115,16 @@ export default class ServerManager {
         return this.request('roll', { nick, password, game });
     }
 
-    async notify(nick, password, game, move) {
-        return this.request('notify', { nick, password, game, move });
+    async notify(nick, password, game, cell) {
+        return this.request('notify', { nick, password, game, cell });
     }
 
     async ranking(size) {
-        return this.request("ranking", { group: this.GROUP_ID, size });
+        return this.request('ranking', { group, size });
+    }
+
+    async pass(nick, password, game) { 
+        return this.request('pass', {nick, password, game });
     }
 
     // ------------------ STATE UTILS ------------------

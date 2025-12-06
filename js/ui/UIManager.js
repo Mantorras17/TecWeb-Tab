@@ -5,6 +5,7 @@ export default class UIManager {
   constructor() {
     this.elements = this.initializeElements();
     this.lastGameMessageBeforeSettings = null;
+    this.scoreManager = null;
   }
 
   initializeElements() {
@@ -32,7 +33,6 @@ export default class UIManager {
       difficultyInput: document.getElementById('difficulty'),
       closePanelBtn: document.getElementById('closePanel'),
       scoreboardBody: document.getElementById('scoreboard-body'),
-      noScoresMsg: document.getElementById('no-scores-msg'),
       modalOverlay: document.getElementById('modal-overlay'),
       modalTitle: document.getElementById('modal-title'),
       modalText: document.getElementById('modal-text'),
@@ -148,15 +148,28 @@ export default class UIManager {
 
   /**
    * Update board rotation (PvP only) so current player sees their side upright.
+   * - Online: Rotates if i am player 2, regardless of turn.
    */
-  updateBoardRotation(game) {
+  updateBoardRotation(game, forceRotate = null) {
     const { boardEl } = this.elements;
     if (!game || !boardEl) return;
 
     const boardBox = boardEl.querySelector('.board-box');
     if (!boardBox) return;
 
-    if (game.isVsPlayer && game.curPlayerIdx === 1) {
+    let shouldRotate = false;
+    if (game.isOnline) {
+      // No Online, obedecemos à flag 'forceRotate' calculada pelo GameController
+      // Se eu sou o Player 2, forceRotate será true.
+      shouldRotate = !!forceRotate;
+    } else {
+      // MODO LOCAL PvP
+      if (game.isVsPlayer && game.curPlayerIdx === 1) {
+        shouldRotate = true;
+      }
+    }
+
+    if (shouldRotate) {
       boardBox.classList.add('rotated');
     } else {
       boardBox.classList.remove('rotated');
@@ -171,13 +184,11 @@ export default class UIManager {
     if (!boardEl || !game) return;
     
     let box = boardEl.querySelector('.board-box');
-    
     if (!box) {
         box = document.createElement('div');
         box.className = 'board-box';
         boardEl.appendChild(box);
     }
-    
     box.innerHTML = '';
 
     const container = document.createElement('div');
@@ -185,47 +196,60 @@ export default class UIManager {
 
     const mePlayer = game.getCurrentPlayer();
     const oppPlayer = game.getOpponentPlayer();
-    const meSkin = (mePlayer.name === 'player1') ? 'p1' : 'p2';
-    const oppSkin = (oppPlayer.name === 'player1') ? 'p1' : 'p2';
+
+
+    // Usa a propriedade .skin do jogador se existir, senão usa defaults
+    const getSkinClass = (p) => {
+      if (p.skin === 'blue') return 'p1'; // Azul/Claro
+      if (p.skin === 'red') return 'p2';  // Vermelho/Escuro
+      // Fallback para nomes antigos
+      return (p.name === 'player1') ? 'p1' : 'p2';
+    };
 
     for (let r = 0; r < game.rows; r++) {
       const rowDiv = document.createElement('div');
       rowDiv.className = 'board-row';
+      
       for (let c = 0; c < game.columns; c++) {
         const cell = document.createElement('button');
         cell.type = 'button';
         cell.className = 'board-cell';
         cell.dataset.row = String(r);
         cell.dataset.col = String(c);
-
+        
+        // (Classes de setas/flow mantêm-se iguais...)
         const flowClass = (r === 0 || r === 2) ? 'flow-left' : 'flow-right';
         cell.classList.add('flow', flowClass);
+        if (r === 0 && c === 0) cell.classList.add('flow-diag-225');
+        if (r === 1 && c === game.columns - 1) cell.classList.add('flow-diag-right-both');
+        if (r === 2 && c === 0) cell.classList.add('flow-diag-135');
+        if (r === 3 && c === game.columns - 1) cell.classList.add('flow-diag-45');
 
-        if (r === 0 && c === 0) {
-          cell.classList.add('flow-diag-225');
-        }
-        if (r === 1 && c === game.columns - 1) {
-          cell.classList.add('flow-diag-right-both');
-        }
-        if (r === 2 && c === 0) {
-          cell.classList.add('flow-diag-135');
-        }
-        if (r === 3 && c === game.columns - 1) {
-          cell.classList.add('flow-diag-45');
+        // Determinar peça
+        // Procuramos diretamente nos jogadores para garantir a cor certa
+        const p1 = game.players[0];
+        const p2 = game.players[1];
+        
+        let piece = p1.getPieceAt(r, c);
+        let owner = p1;
+        
+        if (!piece) {
+            piece = p2.getPieceAt(r, c);
+            owner = p2;
         }
 
-        const me = mePlayer.getPieceAt(r, c);
-        const opp = oppPlayer.getPieceAt(r, c);
-
-        if (me || opp) {
-          const piece = document.createElement('div');
-          piece.className = 'piece ' + (me ? meSkin : oppSkin) + ' ' + (me || opp).state;
-          piece.title = `${me ? mePlayer.name : oppPlayer.name} (${(me || opp).state})`;
-          cell.appendChild(piece);
+        if (piece) {
+          const pieceDiv = document.createElement('div');
+          const skin = getSkinClass(owner);
+          
+          pieceDiv.className = `piece ${skin} ${piece.state}`;
+          pieceDiv.title = `${owner.name} (${piece.state})`;
+          cell.appendChild(pieceDiv);
         }
         rowDiv.appendChild(cell);
       }
       container.appendChild(rowDiv);
+      
       if (r < game.rows - 1) {
         const sep = document.createElement('div');
         sep.className = 'row-sep';
@@ -381,13 +405,18 @@ export default class UIManager {
    * Open scoreboard panel
    */
   openScoreboardPanel() {
-    const { scoreboardPanel, scoreboardBtn } = this.elements;
-    if (scoreboardPanel) {
-      scoreboardPanel.classList.add('open');
-      if (scoreboardBtn) scoreboardBtn.innerHTML = '&times;';
-      setTimeout(() => scoreboardPanel.focus(), 100);
-    }
-  }
+    this.hardShowScoreboard();
+
+    // OFFLINE por defeito
+    this.scoreManager.updateScoreboardView();
+
+    // Tabs
+    this.setupScoreboardTabs(
+      () => this.scoreManager.updateScoreboardView(),
+      () => this.scoreManager.loadOnlineRanking(6) // tamanho default, altera se usares outro
+    );
+}
+
 
   /**
    * Handle setting change during game
@@ -459,4 +488,27 @@ export default class UIManager {
       passTurnBtn.style.cursor = "not-allowed";
     }
   }
+
+  /**
+   * Setup the scoreboard tabs (Offline / Online)
+   */
+  setupScoreboardTabs(onOffline, onOnline) {
+    const offlineBtn = document.getElementById("score-tab-offline");
+    const onlineBtn = document.getElementById("score-tab-online");
+
+    if (!offlineBtn || !onlineBtn) return;
+
+    offlineBtn.addEventListener("click", () => {
+      offlineBtn.classList.add("active-tab");
+      onlineBtn.classList.remove("active-tab");
+      onOffline();
+    });
+
+    onlineBtn.addEventListener("click", () => {
+      onlineBtn.classList.add("active-tab");
+      offlineBtn.classList.remove("active-tab");
+      onOnline();
+    });
+  }
+
 }

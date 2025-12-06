@@ -1,58 +1,46 @@
-/**
- * Manages scoring, leaderboard, and statistics
- */
 export default class ScoreManager {
-  constructor(uiManager) {
+
+  constructor(uiManager, serverManager) {
     this.uiManager = uiManager;
+    this.serverManager = serverManager;
+
     this.scores = {
       player1: { wins: 0, losses: 0, name: 'Player 1' },
       player2: { wins: 0, losses: 0, name: 'Player 2' },
-      cpu: { wins: 0, losses: 0, name: 'Computer' }
+      cpu:      { wins: 0, losses: 0, name: 'Computer' }
     };
   }
 
-  /**
-   * Update score for a game result
-   */
+  // ------------------------------------------------------------
+  // OFFLINE SCOREBOARD
+  // ------------------------------------------------------------
+
   updateScore(winnerName, loserName) {
     if (this.scores[winnerName]) this.scores[winnerName].wins++;
     if (this.scores[loserName]) this.scores[loserName].losses++;
     this.updateScoreboardView();
   }
 
-  /**
-   * Rebuild the scoreboard table and "no scores" message based on tracked stats.
-   */
   updateScoreboardView() {
     const elements = this.uiManager.getElements();
-    const { scoreboardBody, noScoresMsg } = elements;
-    
-    if (!scoreboardBody || !noScoresMsg) return;
-    
+    const { scoreboardBody} = elements;
+
+    if (!scoreboardBody) return;
+
     scoreboardBody.innerHTML = '';
-    const totalGames = this.scores.player1.wins + this.scores.player1.losses + 
-                      this.scores.player2.wins + this.scores.player2.losses + 
-                      this.scores.cpu.wins + this.scores.cpu.losses;
-    
-    if (totalGames === 0) {
-      noScoresMsg.classList.remove('display-none');
-      return;
-    }
-    
-    noScoresMsg.classList.add('display-none');
+
+    // Mostrar sempre as 3 linhas base
     const stats = [
       { name: 'Player 1', ...this.scores.player1 },
       { name: 'Player 2', ...this.scores.player2 },
       { name: 'Computer', ...this.scores.cpu }
     ];
-    
-    stats.sort((a, b) => b.wins - a.wins);
-    
+
     const getRatio = (wins, losses) => {
-      if (losses === 0) return wins > 0 ? String(wins.toFixed(2)) : '0.00';
+      if (losses === 0) return wins > 0 ? wins.toFixed(2) : "0.00";
       return (wins / losses).toFixed(2);
     };
-    
+
     stats.forEach((stat, index) => {
       const row = scoreboardBody.insertRow();
       row.innerHTML = `
@@ -65,10 +53,51 @@ export default class ScoreManager {
     });
   }
 
-  /**
-   * Get current scores
-   */
-  getScores() {
-    return this.scores;
+
+  // ------------------------------------------------------------
+  // ONLINE SCOREBOARD
+  // ------------------------------------------------------------
+
+  async loadOnlineRanking(boardSize) {
+    const container = document.getElementById("scoreboardContent");
+    if (!container) return;
+
+    container.innerHTML = "<p>Loading ranking...</p>";
+
+    try {
+      const list = await this.serverManager.request("ranking", {
+        group: this.serverManager.GROUP_ID,
+        size: boardSize
+      });      
+
+      this.renderOnlineRanking(list);
+
+    } catch (err) {
+      container.innerHTML = `<p class="error">Error loading ranking.</p>`;
+      console.error("Ranking error:", err);
+    }
+  }
+
+  renderOnlineRanking(list) {
+    const container = document.getElementById("scoreboardContent");
+    if (!container) return;
+
+    if (!list || list.length === 0) {
+      container.innerHTML = "<p>No ranking data available.</p>";
+      return;
+    }
+
+    container.innerHTML = `
+      <table class="scoreboard-table">
+        <tr><th>Nick</th><th>Games</th><th>Victories</th></tr>
+        ${list.map(r => `
+          <tr>
+            <td>${r.nick}</td>
+            <td>${r.games}</td>
+            <td>${r.victories}</td>
+          </tr>
+        `).join("")}
+      </table>
+    `;
   }
 }

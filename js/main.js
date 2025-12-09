@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const scoreManager = new ScoreManager(uiManager);
   const serverManager = new ServerManager();
   const cpuController = new CPUController(uiManager, sticksRenderer);
+  //uiManager.setScoreManager(scoreManager);
 
   // 2. State for the Active Controller (Polymorphism)
   let activeController = null;

@@ -8,6 +8,10 @@ export default class UIManager {
     this.scoreManager = null;
   }
 
+  setScoreManager(scoreManager) {
+    this.scoreManager = scoreManager;
+  }
+
   initializeElements() {
     return {
       sizeInput: document.getElementById('board-size'),

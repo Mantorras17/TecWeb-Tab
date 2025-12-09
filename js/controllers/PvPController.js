@@ -112,7 +112,7 @@ export default class PvPController extends BaseGameController {
     if (!confirmed) return;
     const winner = this.game.getOpponentPlayer();
     this.handleGameOver(winner);
-    this.cleanupGame();
+    this.cleanup();
     this.uiManager.setMessage('Game quit.');
     this.uiManager.closeSidePanel();
     

@@ -1,8 +1,11 @@
-import BaseGameController from './BaseGameController.js';
 import TabGame from '../classes/Tabgame.js';
+import BaseGameController from './BaseGameController.js';
 import { TIMING } from '../constants/Constants.js';
 
-export default class PvCController extends BaseGameController {
+/**
+ * Game controller for Player vs CPU games
+ */
+export default class PvCPUController extends BaseGameController {
   constructor(uiManager, sticksRenderer, scoreManager, modalManager, cpuController) {
     super(uiManager, sticksRenderer, scoreManager, modalManager);
     this.cpuController = cpuController;
@@ -10,28 +13,18 @@ export default class PvCController extends BaseGameController {
 
   initGame(cols, difficulty, firstPlayer) {
     this.game = new TabGame(cols);
-    this.game.isVsPlayer = false;
-    this.game.difficultyLevel = difficulty;
-    this.game.players[0].name = 'player1';
-    this.game.players[1].name = 'cpu';
-    
-    if (firstPlayer === 'cpu') {
-        this.game.curPlayerIdx = 1;
-    } else {
-        this.game.curPlayerIdx = 0;
-    }
-
+    this.game.curPlayerIdx = (firstPlayer === 'cpu') ? 1 : 0;
     window.game = this.game;
-    
+
     this.setupCommonUI();
     this.renderAll();
 
-    const cur = this.game.getCurrentPlayer();
-    if (cur.name === 'cpu') {
-        this.uiManager.setMessage("Game Started. CPU goes first.");
-        setTimeout(() => this.cpuController.maybeCpuTurn(this.game, this), TIMING.cpuStartMs);
+    const currentPlayer = this.game.getCurrentPlayer();
+    if (currentPlayer.name === 'cpu') {
+      this.uiManager.setMessage('Game started. CPU goes first!');
+      setTimeout(() => this.cpuController.maybeCpuTurn(this.game), TIMING.cpuStartMs);
     } else {
-        this.uiManager.setMessage("Game Started. Player 1 vs CPU.");
+      this.uiManager.setMessage('Game started. Your turn!');
     }
   }
 
@@ -58,21 +51,18 @@ export default class PvCController extends BaseGameController {
   }
 
   handleRoll() {
-    // REFACTORED: Call base to check eligibility and lock button
     if (!super.handleRoll()) return;
 
-    // Proceed with specific logic
-    const val = this.game.startTurn();
-    this.sticksRenderer.renderSticks({ value: val, sticks: this.game.lastSticks }, { animate: true });
-    
+    const value = this.game.startTurn();
+    this.sticksRenderer.renderSticks({ value: value, sticks: this.game.lastSticks }, { animate: true });
     this.sticksRenderer.queueAfterFlip(() => {
-        this.announceRoll('player1', val);
+        this.announceRoll('player1', value);
         const hasMoves = this.hasAnyValidMoves();
         
         if (!hasMoves) {
-            const isBonus = [1, 4, 6].includes(val);
+            const isBonus = this.game.extraTurns.includes(value);
             if (isBonus) {
-                this.uiManager.setMessage(`Bonus roll (${val}) but no moves. Roll again!`);
+                this.uiManager.setMessage(`Bonus roll (${value}) but no moves. Roll again!`);
                 this.game.endTurn(true);
             } else {
                 this.uiManager.setMessage("No moves. Pass turn.");
@@ -83,10 +73,9 @@ export default class PvCController extends BaseGameController {
     });
   }
 
-  // ... (handleBoardClick and handlePass remain the same) ...
   handleBoardClick(row, col) {
     if (this.game.getCurrentPlayer().name === 'cpu') return; 
-    
+
     if (this.game.selectOrMoveAt(row, col)) {
         this.renderAll({ updateSticks: false });
         if (this.checkGameOver()) return;
@@ -99,10 +88,10 @@ export default class PvCController extends BaseGameController {
         }
     }
   }
-  
+
   handlePass() {
     const roll = this.game.stickValue || this.game.lastStickValue;
-    const isBonus = [1,4,6].includes(roll);
+    const isBonus = this.game.extraTurns.includes(roll);
     this.game.endTurn(isBonus); 
     this.renderAll();
     if (this.game.getCurrentPlayer().name === 'cpu') {
@@ -117,9 +106,9 @@ export default class PvCController extends BaseGameController {
       'Are you sure you want to quit? This action will count as a loss.',
       'Yes, quit',
       'No, cancel'
-    );      
+    );
     if (!confirmed) return;
-    const winner = this.game.players[1]; 
+    const winner = this.game.players[1];
     this.handleGameOver(winner);
     this.cleanup();
     this.uiManager.setMessage('Game quit.');

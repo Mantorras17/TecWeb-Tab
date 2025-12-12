@@ -27,8 +27,18 @@ export default class ScoreManager {
 
     if (!scoreboardBody) return;
 
+    // Ensure local leaderboard panel is visible and remove any online panel
+    const container = document.getElementById('leaderboard-content');
+    if (container) {
+      const onlinePanel = container.querySelector('#leaderboard-online');
+      if (onlinePanel) onlinePanel.remove();
+      const localPanel = container.querySelector('#leaderboard-local');
+      if (localPanel) localPanel.style.display = '';
+    }
+
     scoreboardBody.innerHTML = '';
 
+    // Mostrar sempre as 3 linhas base
     const stats = [
       { name: 'Player 1', ...this.scores.player1 },
       { name: 'Player 2', ...this.scores.player2 },
@@ -58,37 +68,53 @@ export default class ScoreManager {
   // ------------------------------------------------------------
 
   async loadOnlineRanking(boardSize) {
-    const container = document.getElementById("scoreboardContent");
+    // Use the existing leaderboard container in the DOM
+    const container = document.getElementById("leaderboard-content");
     if (!container) return;
 
     container.innerHTML = "<p>Loading ranking...</p>";
 
     try {
-      const list = await this.serverManager.request("ranking", {
+      const resp = await this.serverManager.request("ranking", {
         group: this.serverManager.GROUP_ID,
         size: boardSize
-      });      
+      });
 
+      const list = Array.isArray(resp) ? resp : (resp && resp.ranking) ? resp.ranking : [];
       this.renderOnlineRanking(list);
 
     } catch (err) {
-      container.innerHTML = `<p class="error">Error loading ranking.</p>`;
+      // Show error but ensure offline tab can still be accessed
+      container.innerHTML = `<p class="error">Error loading ranking: ${err.message || err}</p>`;
       console.error("Ranking error:", err);
     }
   }
 
   renderOnlineRanking(list) {
-    const container = document.getElementById("scoreboardContent");
+    const container = document.getElementById("leaderboard-content");
     if (!container) return;
 
+    // Hide the local panel and show/create the online panel
+    const localPanel = container.querySelector('#leaderboard-local');
+    if (localPanel) localPanel.style.display = 'none';
+
+    let onlinePanel = container.querySelector('#leaderboard-online');
+    if (!onlinePanel) {
+      onlinePanel = document.createElement('div');
+      onlinePanel.className = 'leaderboard-panel';
+      onlinePanel.id = 'leaderboard-online';
+      container.appendChild(onlinePanel);
+    }
+
     if (!list || list.length === 0) {
-      container.innerHTML = "<p>No ranking data available.</p>";
+      onlinePanel.innerHTML = "<p>No ranking data available.</p>";
       return;
     }
 
-    container.innerHTML = `
+    onlinePanel.innerHTML = `
       <table class="scoreboard-table">
-        <tr><th>Nick</th><th>Games</th><th>Victories</th></tr>
+        <thead><tr><th>Nick</th><th>Games</th><th>Victories</th></tr></thead>
+        <tbody>
         ${list.map(r => `
           <tr>
             <td>${r.nick}</td>
@@ -96,6 +122,7 @@ export default class ScoreManager {
             <td>${r.victories}</td>
           </tr>
         `).join("")}
+        </tbody>
       </table>
     `;
   }

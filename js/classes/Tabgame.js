@@ -110,7 +110,7 @@ export default class TabGame {
   endTurn(keepTurn = false) {
     if (this.over) return;
     this.stickValue = null;
-    this.waitingForPass = false; // Reset the manual pass flag
+    this.waitingForPass = false;
     if (!keepTurn) this.curPlayerIdx = 1 - this.curPlayerIdx;
   }
 
@@ -164,12 +164,8 @@ export default class TabGame {
    * @returns {{row:number,col:number}[]}
    */
   possibleMoves(piece, sticks) {
-    // FIX: Strict Rule - Only lock pieces that have NEVER moved (state 'not-moved').
-    // If piece.state is 'moved' or 'first-row', it is unlocked and can move on any roll.
     if (piece.state === 'not-moved') {
-       if (sticks !== 1) {
-         return []; 
-       }
+      if (sticks !== 1) return []; 
     }
 
     if (piece.canMoveFirst && !piece.canMoveFirst(sticks)) return [];
@@ -204,6 +200,7 @@ export default class TabGame {
     return coords.filter(({ row, col }) => {
       const occ = this.isCellOccupied(row, col);
       const blocked = (occ && occ.owner === 'me');
+
       if (row === lastLine && piece.isCurrentlyInLastRow()) {
         if (!piece.canMoveInLastRow()) return false;
       }
@@ -234,30 +231,24 @@ export default class TabGame {
     return this.getAllLegalMoves().length > 0;
   }
 
+  autoSkipIfNoMoves() {
+    if (this.hasAnyLegalMove()) return false;
+    const keepTurn = this.playAgain();
+    this.endTurn(keepTurn);
+    return true;
+  }
+
   /**
    * Select a piece and compute its legal destinations for the current roll.
    * @param {number} row
    * @param {number} col
    * @returns {{row:number,col:number}[]} The legal destinations.
-
-   * MISSING METHOD FIXED HERE
-   * Checks if current player has moves. If not, resolves turn (Pass or Extra Turn).
    */
-  autoSkipIfNoMoves() {
-    if (this.hasAnyLegalMove()) return false;
-
-    // No moves available
-    const keepTurn = this.playAgain(); // If 1, 4, 6, they get to roll again even with no moves
-    this.endTurn(keepTurn);
-    return true;
-  }
-
   selectPieceAt(row, col) {
     const piece = this.getCurrentPlayer().getPieceAt(row, col);
     if (!piece) return [];
     if (this.stickValue === null) return [];
     
-    // Check possible moves first to save processing
     const moves = this.possibleMoves(piece, this.stickValue);
     if (moves.length === 0) return [];
 
@@ -336,25 +327,17 @@ export default class TabGame {
 
     if (this.checkGameOver().over) return true;
 
-    // --- MANUAL PASS TURN LOGIC ---
-    const again = this.playAgain(); // True for 1, 4, 6
+    const again = this.playAgain();
     const isCpu = (this.getCurrentPlayer().name === 'cpu');
 
-    if (again) {
-        // If 1, 4, 6: Keep turn immediately (Standard rule)
-        this.endTurn(true);
-    } else {
-        // If 2, 3:
-        if (isCpu) {
-            // CPU passes automatically (no button click needed)
-            this.endTurn(false);
-        } else {
-            // HUMAN: Do NOT end turn yet. Wait for button click.
-            this.stickValue = null; // Cannot move anymore
-            this.waitingForPass = true; // Activate the button
-        }
+    if (again) this.endTurn(true);
+    else {
+      if (isCpu) this.endTurn(false);
+      else {
+        this.stickvalue = null;
+        this.waitingForPass = true;
+      }
     }
-    // -----------------------------------
     return true;
   }
 
@@ -389,7 +372,6 @@ export default class TabGame {
     
     // CPU Must Auto-Pass if no moves
     if (legalMoves.length === 0) {
-      // Should be handled by autoSkip, but safeguard:
       const keepTurn = this.playAgain();
       this.endTurn(keepTurn);
       return true;
@@ -453,10 +435,11 @@ export default class TabGame {
    * @returns {boolean}
    */
   cpuMove() {
-    if (this.difficultyLevel === 0) return this.cpuMoveRandom();
-    if (this.difficultyLevel === 1) return this.cpuMoveHeuristic();
-    if (this.difficultyLevel === 2) return this.cpuMoveMinimax();
-    return this.cpuMoveRandom();
+    switch (this.difficultyLevel) {
+      case 1: return this.cpuMoveHeuristic();
+      case 2: return this.cpuMoveMinimax();
+      default: return this.cpuMoveRandom();
+    }
   }
 
 
@@ -464,7 +447,7 @@ export default class TabGame {
    * Heuristic evaluation of the current position for the current player.
    * @returns {number}
    */
-  evaluateBoard() {
+/*   evaluateBoard() {
     const me = this.getCurrentPlayer();
     const opponent = this.getOpponentPlayer();
     const gameOverState = this.checkGameOver();
@@ -483,7 +466,7 @@ export default class TabGame {
       else if (piece.state !== 'not-moved') score -= 5;
     }
     return score;
-  }
+  } */
 
 
   /**

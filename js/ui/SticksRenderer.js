@@ -1,5 +1,6 @@
-import { TIMING } from '../constants/Constants.js';
-
+/**
+ * Handles stick throwing animation, rendering, and timing
+ */
 export default class SticksRenderer {
   constructor(uiManager) {
     this.uiManager = uiManager;
@@ -7,7 +8,6 @@ export default class SticksRenderer {
     this.queue = [];
     this.animationId = null;
 
-    // --- PRELOAD IMAGES ---
     this.imgLight = new Image();
     this.imgLight.src = 'img/lightpiece.jpg';
     
@@ -24,6 +24,9 @@ export default class SticksRenderer {
     this.imgDark.onload = checkLoad;
   }
 
+  /**
+   * Queue a callback to run after the sticks animation (or run now if idle).
+   */
   queueAfterFlip(cb, delay = 0) {
     if (!this.busy) {
       setTimeout(cb, delay);
@@ -32,10 +35,16 @@ export default class SticksRenderer {
     this.queue.push(() => setTimeout(cb, delay));
   }
 
+  /**
+   * Queue a message update to run after the sticks animation.
+   */
   msgAfterFlip(text, delay = 0) {
     this.queueAfterFlip(() => this.uiManager.setMessage(text), delay);
   }
 
+  /**
+   * Reset the stick display to neutral (grey/inactive) after a delay.
+   */
   sticksToGrey(delayMs = 0) {
     setTimeout(() => this.renderSticks(null, { force: true, animate: false }), delayMs);
   }
@@ -51,58 +60,40 @@ export default class SticksRenderer {
     };
   }
 
-  /**
-   * Draws a single stick with horizontal rotation
-   */
   drawStick(ctx, x, y, w, h, type, rotationAngle = 0) {
-    // rotationAngle: 0 = Flat. Math.PI = 1 full flip.
-    
-    // --- CHANGE 1: Calculate Scale based on X axis ---
+
     const scaleX = Math.cos(rotationAngle);
     const isBackside = scaleX < 0;
-    
+
     let currentImg;
-    if (rotationAngle !== 0) {
-        // While spinning, swap textures based on flip side
-        currentImg = isBackside ? this.imgDark : this.imgLight;
-    } else {
-        // Static state
-        currentImg = (type === 1) ? this.imgLight : this.imgDark;
-    }
+
+    if (rotationAngle !== 0) currentImg = isBackside ? this.imgDark : this.imgLight;
+    else currentImg = (type === 1) ? this.imgLight : this.imgDark;
 
     ctx.save();
-    
-    // Translate to center of stick for rotation
     ctx.translate(x + w / 2, y + h / 2);
-
-    // --- CHANGE 2: Apply Scale to X instead of Y ---
-    // (scaleX, 1) creates the horizontal flipping effect
     ctx.scale(Math.abs(scaleX), 1); 
     
-    // Draw coordinates relative to center
     const drawX = -w / 2;
     const drawY = -h / 2;
     
     ctx.beginPath();
     const radius = 18; 
-    if (ctx.roundRect) {
-        ctx.roundRect(drawX, drawY, w, h, radius);
-    } else {
-        ctx.rect(drawX, drawY, w, h);
-    }
+    if (ctx.roundRect) ctx.roundRect(drawX, drawY, w, h, radius);
+    else ctx.rect(drawX, drawY, w, h);
+
     ctx.closePath();
     ctx.clip();
 
-    if (this.imagesLoaded) {
-        ctx.drawImage(currentImg, drawX, drawY, w, h);
-    } else {
-        ctx.fillStyle = (type === 1) ? '#f4e2be' : '#3b2b22';
-        ctx.fillRect(drawX, drawY, w, h);
+    if (this.imagesLoaded) ctx.drawImage(currentImg, drawX, drawY, w, h);
+    else {
+      ctx.fillStyle = (type === 1) ? '#f4e2be' : '#3b2b22';
+      ctx.fillRect(drawX, drawY, w, h);
     }
 
     if (type === -1) {
-         ctx.fillStyle = 'rgba(50, 50, 50, 0.7)';
-         ctx.fillRect(drawX, drawY, w, h);
+      ctx.fillStyle = 'rgba(50, 50, 50, 0.7)';
+      ctx.fillRect(drawX, drawY, w, h);
     }
 
     ctx.strokeStyle = '#351a1a';
@@ -127,25 +118,28 @@ export default class SticksRenderer {
     const startY = 10; 
 
     sticks.forEach((val, i) => {
-        const x = startX + (i * (stickW + gap));
-        const individualAngle = rotationAngle + (i * 0.3); 
-        this.drawStick(ctx, x, startY, stickW, stickH, val, rotationAngle === 0 ? 0 : individualAngle);
+      const x = startX + (i * (stickW + gap));
+      const individualAngle = rotationAngle + (i * 0.3); 
+      this.drawStick(ctx, x, startY, stickW, stickH, val, rotationAngle === 0 ? 0 : individualAngle);
     });
 
     if (labelText) {
-        ctx.font = 'bold 22px "Segoe UI", sans-serif';
-        ctx.fillStyle = '#3b2b22';
-        ctx.textAlign = 'center';
-        ctx.fillText(labelText, width / 2, startY + stickH + 40);
+      ctx.font = 'bold 22px "Segoe UI", sans-serif';
+      ctx.fillStyle = '#3b2b22';
+      ctx.textAlign = 'center';
+      ctx.fillText(labelText, width / 2, startY + stickH + 40);
     }
   }
 
+  /**
+   * Render the sticks (neutral or showing a roll) and animate if requested.
+   */
   renderSticks(valueOrResult, opts = {}) {
     const data = this.getCanvas();
     if (!data) return;
 
     if (this.uiManager && this.uiManager.getElements().sticksEl) {
-        this.uiManager.show(this.uiManager.getElements().sticksEl);
+      this.uiManager.show(this.uiManager.getElements().sticksEl);
     }
 
     const force = opts.force === true;
@@ -154,26 +148,26 @@ export default class SticksRenderer {
     if (this.busy && !force) return;
 
     if (this.animationId) {
-        cancelAnimationFrame(this.animationId);
-        this.animationId = null;
+      cancelAnimationFrame(this.animationId);
+      this.animationId = null;
     }
 
     const hasValue = typeof valueOrResult === 'number' || (valueOrResult && valueOrResult.value != null);
     if (!hasValue) {
-        this.drawScene([-1, -1, -1, -1], ""); 
-        return;
+      this.drawScene([-1, -1, -1, -1], ""); 
+      return;
     }
 
     const value = typeof valueOrResult === 'number' ? valueOrResult : valueOrResult.value;
     const finalSticks = (typeof valueOrResult === 'object' && valueOrResult.sticks)
-        ? valueOrResult.sticks
-        : (window.game?.lastSticks?.length ? window.game.lastSticks : [0, 0, 0, 0]);
+      ? valueOrResult.sticks
+      : (window.game?.lastSticks?.length ? window.game.lastSticks : [0, 0, 0, 0]);
 
     const labelText = (value === 1) ? `${value} move` : `${value} moves`;
 
     if (!animate) {
-        this.drawScene(finalSticks, labelText, 0);
-        return;
+      this.drawScene(finalSticks, labelText, 0);
+      return;
     }
 
     this.busy = true;
@@ -181,27 +175,29 @@ export default class SticksRenderer {
     const duration = 2000; 
 
     const loop = (time) => {
-        const elapsed = time - startTime;
+      const elapsed = time - startTime;
+      
+      if (elapsed < duration) {
+        const angle = (elapsed / 400) * Math.PI; 
         
-        if (elapsed < duration) {
-            // Spin speed controlled here (700 = slow/heavy)
-            const angle = (elapsed / 400) * Math.PI; 
-            
-            this.drawScene([0, 0, 0, 0], "Rolling...", angle);
-            this.animationId = requestAnimationFrame(loop);
-        } else {
-            this.drawScene(finalSticks, labelText, 0);
-            this.busy = false;
-            this.animationId = null;
-            
-            const tasks = this.queue.splice(0, this.queue.length);
-            tasks.forEach(fn => fn());
-        }
+        this.drawScene([0, 0, 0, 0], "Rolling...", angle);
+        this.animationId = requestAnimationFrame(loop);
+      } else {
+        this.drawScene(finalSticks, labelText, 0);
+        this.busy = false;
+        this.animationId = null;
+        
+        const tasks = this.queue.splice(0, this.queue.length);
+        tasks.forEach(fn => fn());
+      }
     };
 
     this.animationId = requestAnimationFrame(loop);
   }
 
+  /**
+   * Check if sticks are currently busy animating
+   */
   isBusy() {
     return this.busy;
   }

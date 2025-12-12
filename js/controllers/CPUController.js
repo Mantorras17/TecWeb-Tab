@@ -1,4 +1,5 @@
-import { TIMING } from '../constants/Constants.js';
+import { TIMING, ROLL_NAMES } from '../constants/Constants.js';
+
 
 /**
  * Handles CPU behavior, timing, and AI moves
@@ -101,14 +102,12 @@ export default class CPUController {
    * Announce a roll result using localized names and current player's label.
    */
   announceRoll(playerName, value) {
-    import('../constants/Constants.js').then(({ ROLL_NAMES }) => {
-      const name = ROLL_NAMES[value] ?? String(value);
-      const who =
-        playerName === 'player1' ? 'Player 1' :
-        playerName === 'player2' ? 'Player 2' :
-        playerName === 'cpu' ? 'Player 2' : 'Player';
-      this.uiManager.setMessage(`${who} rolled a ${name} (${value})!`);
-    });
+    const name = ROLL_NAMES[value] ?? String(value);
+    const who =
+      playerName === 'player1' ? 'Player 1' :
+      playerName === 'player2' ? 'Player 2' :
+      playerName === 'cpu' ? 'Player 2' : 'Player';
+    this.uiManager.setMessage(`${who} rolled a ${name} (${value})!`);
   }
 
   /**

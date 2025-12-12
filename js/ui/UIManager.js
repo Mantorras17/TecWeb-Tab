@@ -8,10 +8,6 @@ export default class UIManager {
     this.scoreManager = null;
   }
 
-  setScoreManager(scoreManager) {
-    this.scoreManager = scoreManager;
-  }
-
   initializeElements() {
     return {
       sizeInput: document.getElementById('board-size'),
@@ -97,8 +93,6 @@ export default class UIManager {
     }
     this.hide(menuBtn);
     this.hide(rollBtn);
-    
-    // FIX: Ensure Pass Button is hidden on intro
     this.hide(passTurnBtn);
   }
 
@@ -121,8 +115,6 @@ export default class UIManager {
       mainGrid.classList.add('visible');
     }
     this.show(menuBtn);    
-    
-    // FIX: Hide all game buttons until "Start" is clicked
     this.hide(rollBtn);
     this.hide(passTurnBtn);
   }
@@ -197,10 +189,6 @@ export default class UIManager {
 
     const container = document.createElement('div');
     container.className = 'board-container';
-
-    const mePlayer = game.getCurrentPlayer();
-    const oppPlayer = game.getOpponentPlayer();
-
 
     // Usa a propriedade .skin do jogador se existir, senão usa defaults
     const getSkinClass = (p) => {
@@ -408,7 +396,7 @@ export default class UIManager {
   /**
    * Open scoreboard panel
    */
-  openScoreboardPanel() {
+  openScoreboardPanel(boardSize) {
     this.hardShowScoreboard();
 
     // OFFLINE por defeito
@@ -417,7 +405,7 @@ export default class UIManager {
     // Tabs
     this.setupScoreboardTabs(
       () => this.scoreManager.updateScoreboardView(),
-      () => this.scoreManager.loadOnlineRanking(6) // tamanho default, altera se usares outro
+      () => this.scoreManager.loadOnlineRanking(boardSize)
     );
 }
 
@@ -514,5 +502,4 @@ export default class UIManager {
       onOnline();
     });
   }
-
 }

@@ -66,43 +66,43 @@ export default class ServerManager {
 
     // ------------------ SSE - UPDATE ------------------
 
-update(game, nick, onMessage) {
-    // Fecha qualquer ligação anterior
-    this.closeUpdate();
+    update(game, nick, onMessage) {
+        // Fecha qualquer ligação anterior
+        this.closeUpdate();
 
-    const url =
-        `${this.SERVER_URL}update?game=${encodeURIComponent(game)}&nick=${encodeURIComponent(nick)}`;
+        const url =
+            `${this.SERVER_URL}update?game=${encodeURIComponent(game)}&nick=${encodeURIComponent(nick)}`;
 
-    const eventSource = new EventSource(url);
-    this.state.eventSource = eventSource;
+        const eventSource = new EventSource(url);
+        this.state.eventSource = eventSource;
 
-    eventSource.onmessage = (event) => {
-        if (!event.data) return;
-        try {
-            const data = JSON.parse(event.data);
+        eventSource.onmessage = (event) => {
+            if (!event.data) return;
+            try {
+                const data = JSON.parse(event.data);
 
-            // O GUIÃO diz que o servidor envia step, turn, pieces.
-            if (data.step) this.state.step = data.step;
-            if (data.turn) this.state.turn = data.turn;
-            if (data.pieces) this.state.pieces = data.pieces;
+                // O GUIÃO diz que o servidor envia step, turn, pieces.
+                if (data.step) this.state.step = data.step;
+                if (data.turn) this.state.turn = data.turn;
+                if (data.pieces) this.state.pieces = data.pieces;
 
-            if (onMessage) onMessage(data);
-        } catch (e) {
-            console.error("Erro a processar SSE:", e);
-        }
-    };
+                if (onMessage) onMessage(data);
+            } catch (e) {
+                console.error("Erro a processar SSE:", e);
+            }
+        };
 
-    eventSource.onerror = (error) => {
-        console.error("Erro SSE (game inválido?):", error);
-    };
-}
-
-closeUpdate() {
-    if (this.state.eventSource) {
-        this.state.eventSource.close();
-        this.state.eventSource = null;
+        eventSource.onerror = (error) => {
+            console.error("Erro SSE (game inválido?):", error);
+        };
     }
-}
+
+    closeUpdate() {
+        if (this.state.eventSource) {
+            this.state.eventSource.close();
+            this.state.eventSource = null;
+        }
+    }
 
 
     // ------------------ SERVER COMMANDS ------------------
@@ -119,7 +119,7 @@ closeUpdate() {
         return this.request('notify', { nick, password, game, cell });
     }
 
-    async ranking(size) {
+    async ranking(group, size) {
         return this.request('ranking', { group, size });
     }
 
@@ -142,6 +142,6 @@ closeUpdate() {
     clearGame() {
         this.state.active = false;
         this.state.gameId = null;
-        this.closeUpdate();
+        this.stopListening();
     }
 }

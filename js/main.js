@@ -5,35 +5,29 @@ import ScoreManager from './managers/ScoreManager.js';
 import EventManager from './managers/EventManager.js';
 import ServerManager from './managers/ServerManager.js';
 
-// --- NEW CONTROLLERS ---
 import CPUController from './controllers/CPUController.js';
-import PvPController from './controllers/PvPController.js';
-import PvCController from './controllers/PvCController.js';
-import OnlineController from './controllers/OnlineController.js';
+import PvCPUController from './controllers/PvCPUController.js';
+import PvPLocalController from './controllers/PvPLocalController.js';
+import PvPOnlineController from './controllers/PvPOnlineController.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-  // 1. Initialize Managers
+  // Initialize managers
   const uiManager = new UIManager();
   const sticksRenderer = new SticksRenderer(uiManager);
   const modalManager = new ModalManager(uiManager);
-  const scoreManager = new ScoreManager(uiManager);
   const serverManager = new ServerManager();
+  const scoreManager = new ScoreManager(uiManager, serverManager);
   const cpuController = new CPUController(uiManager, sticksRenderer);
-  //uiManager.setScoreManager(scoreManager);
+  uiManager.scoreManager = scoreManager;
 
-  // 2. State for the Active Controller (Polymorphism)
   let activeController = null;
 
-  // 3. The Coordinator (Proxy)
-  // This object mimics the old GameController interface so EventManager still works.
-  const gameCoordinator = {
-    
-    // --- START LOGIC ---
+  // Facade to select the correct controller
+  const gameController = {
     startNewGame: async () => {
       const elements = uiManager.getElements();
 
-      // Check if game is running
-      if (activeController && window.game) { // window.game is set by the active controller
+      if (activeController && window.game) {
         const confirmed = await modalManager.showModal(
           'New game?',
           'Starting a new game will cancel the current one. Are you sure?',
@@ -43,85 +37,71 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Handle Online Leave
         if (serverManager.state.active) {
-           await serverManager.leave(serverManager.state.nick, serverManager.state.pass, serverManager.state.gameId);
-           serverManager.clearGame();
+          await serverManager.leave(serverManager.state.nick, serverManager.state.pass, serverManager.state.gameId);
+          serverManager.clearGame();
         }
 
         if (!confirmed) return;
         
-        // Cleanup old controller
         if (activeController.cleanup) activeController.cleanup();
       }
 
-      // Read Settings
       const gameMode = elements.gameModeInput?.value || 'pvc';
       const cols = elements.sizeInput ? parseInt(elements.sizeInput.value, 10) || 9 : 9;
       const difficulty = elements.difficultyInput ? elements.difficultyInput.value : 'easy';
       const firstPlayer = elements.firstPlayerInput ? elements.firstPlayerInput.value : 'player1';
-
-      // --- FACTORY SWITCH ---
-      if (gameMode === 'online') {
-          // ONLINE
-          activeController = new OnlineController(
-              uiManager, sticksRenderer, scoreManager, modalManager, serverManager
-          );
-          // Online usually handles its own "init" via server joining
-          await activeController.initGame(cols); 
-
-      } else if (gameMode === 'pvc') {
-          // Player vs CPU
-          activeController = new PvCController(
-              uiManager, sticksRenderer, scoreManager, modalManager, cpuController
-          );
-          activeController.initGame(cols, difficulty, firstPlayer);
-
-      } else {
-          // Player vs Player
-          activeController = new PvPController(
-              uiManager, sticksRenderer, scoreManager, modalManager
-          );
-          activeController.initGame(cols, firstPlayer);
-      }
       
-      // Expose for debugging
-      window.gameController = activeController; 
+      switch (gameMode) {
+        case 'online': {
+          activeController = new PvPOnlineController(uiManager, sticksRenderer, scoreManager, modalManager, serverManager); 
+          activeController.initGame(cols);
+          break;
+        }
+        case 'pvp': {
+          activeController = new PvPLocalController(uiManager, sticksRenderer, scoreManager, modalManager); 
+          activeController.initGame(cols, firstPlayer);
+          break;
+        }
+        default: {
+          activeController = new PvCPUController(uiManager, sticksRenderer, scoreManager, modalManager, cpuController); 
+          activeController.initGame(cols, difficulty, firstPlayer);
+          break;
+        }
+      };
+      window.gameController = activeController;
     },
 
-    // --- DELEGATION METHODS ---
-    // These pass the events to whichever controller is currently active
-    
-    handlePlayerRoll: () => {
+    handlePlayerRoll() {
       if (activeController) activeController.handleRoll();
     },
 
-    handleBoardClick: (row, col) => {
+    handleBoardClick(row, col) {
       if (activeController) activeController.handleBoardClick(row, col);
     },
 
-    handlePassTurn: () => {
+    handlePassTurn() {
       if (activeController) activeController.handlePass();
     },
 
     handleQuitGame: async () => {
-        if (activeController) {
-            await activeController.handleQuit();
-            activeController = null;
-        }
+      if (activeController) {
+        await activeController.handleQuit();
+        activeController = null;
+      }
     }
   };
+  
+  // Set up event management
+  const eventManager = new EventManager(gameController, uiManager, modalManager, serverManager);
 
-  // 4. Set up Event Management with the Coordinator
-  // EventManager thinks it is talking to a normal GameController, 
-  // but it's actually talking to our dynamic Proxy.
-  const eventManager = new EventManager(gameCoordinator, uiManager, modalManager, serverManager);
-
-  // 5. Globals & Init
   window.serverManager = serverManager;
-  window.game = null; // Will be populated by the specific controllers
+  window.game = null;
   window.gameMessage = (text) => uiManager.setMessage(text);
 
+  // Initialize UI state
   const elements = uiManager.getElements();
   uiManager.hide(elements.rollBtn);
+  uiManager.show(elements.scoreboardBtn);
   modalManager.collectPages();
   scoreManager.updateScoreboardView();
   uiManager.updateFirstPlayerOptions();

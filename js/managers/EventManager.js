@@ -141,7 +141,15 @@ export default class EventManager {
       scoreboardBtn.addEventListener('click', () => {
         const isOpen = scoreboardPanel.classList.toggle('open');
         scoreboardBtn.innerHTML = isOpen ? '&times;' : '🏆';
-        if (isOpen) setTimeout(() => scoreboardPanel.focus(), 100);
+        if (isOpen) {
+          // Ensure UI wiring and initial render occurs when panel opens
+          try {
+            this.uiManager.openScoreboardPanel(this.gameController.game?.columns || 9);
+          } catch (e) {
+            console.warn('Error opening scoreboard panel via UIManager', e);
+          }
+          setTimeout(() => scoreboardPanel.focus(), 100);
+        }
       });
 
       scoreboardPanel.addEventListener('click', (e) => {

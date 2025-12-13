@@ -56,7 +56,7 @@ export default class UIManager {
   }
 
   /**
-   * Hide any element by adding 'hidden' and setting display: none.
+   * Hide any element by adding 'hidden' and setting display: none via class.
    */
   hide(el) {
     if (el) { 
@@ -65,7 +65,7 @@ export default class UIManager {
   }
 
   /**
-   * Show any element by removing 'hidden' and restoring display.
+   * Show any element by removing 'hidden' and restoring display via class.
    */
   show(el) {
     if (el) {
@@ -155,11 +155,8 @@ export default class UIManager {
 
     let shouldRotate = false;
     if (game.isOnline) {
-      // No Online, obedecemos à flag 'forceRotate' calculada pelo GameController
-      // Se eu sou o Player 2, forceRotate será true.
       shouldRotate = !!forceRotate;
     } else {
-      // MODO LOCAL PvP
       if (game.isVsPlayer && game.curPlayerIdx === 1) {
         shouldRotate = true;
       }
@@ -190,11 +187,9 @@ export default class UIManager {
     const container = document.createElement('div');
     container.className = 'board-container';
 
-    // Usa a propriedade .skin do jogador se existir, senão usa defaults
     const getSkinClass = (p) => {
-      if (p.skin === 'blue') return 'p1'; // Azul/Claro
-      if (p.skin === 'red') return 'p2';  // Vermelho/Escuro
-      // Fallback para nomes antigos
+      if (p.skin === 'blue') return 'p1';
+      if (p.skin === 'red') return 'p2';
       return (p.name === 'player1') ? 'p1' : 'p2';
     };
 
@@ -209,7 +204,6 @@ export default class UIManager {
         cell.dataset.row = String(r);
         cell.dataset.col = String(c);
         
-        // (Classes de setas/flow mantêm-se iguais...)
         const flowClass = (r === 0 || r === 2) ? 'flow-left' : 'flow-right';
         cell.classList.add('flow', flowClass);
         if (r === 0 && c === 0) cell.classList.add('flow-diag-225');
@@ -217,8 +211,6 @@ export default class UIManager {
         if (r === 2 && c === 0) cell.classList.add('flow-diag-135');
         if (r === 3 && c === game.columns - 1) cell.classList.add('flow-diag-45');
 
-        // Determinar peça
-        // Procuramos diretamente nos jogadores para garantir a cor certa
         const p1 = game.players[0];
         const p2 = game.players[1];
         
@@ -288,9 +280,6 @@ export default class UIManager {
     }
   }
 
-  /**
-   * Set board disabled state for CPU turns
-   */
   setBoardDisabled(disabled) {
     const { boardEl } = this.elements;
     if (boardEl) {
@@ -302,9 +291,6 @@ export default class UIManager {
     }
   }
 
-  /**
-   * Enable/disable the side panel close button (and sync aria state).
-   */
   setCloseBlocked(block) {
     const { closePanelBtn } = this.elements;
     if (!closePanelBtn) return;
@@ -312,9 +298,6 @@ export default class UIManager {
     closePanelBtn.setAttribute('aria-disabled', String(!!block));
   }
 
-  /**
-   * Open the left side configuration panel.
-   */
   openSidePanel() {
     const { sidePanel, menuBtn } = this.elements;
     if (!sidePanel || !menuBtn) return;
@@ -323,9 +306,6 @@ export default class UIManager {
     setTimeout(() => sidePanel.focus(), 100);
   }
 
-  /**
-   * Close the left side configuration panel.
-   */
   closeSidePanel() {
     const { sidePanel, menuBtn } = this.elements;
     if (!sidePanel || !menuBtn) return;
@@ -333,9 +313,6 @@ export default class UIManager {
     menuBtn.innerHTML = '&#9776;';
   }
 
-  /**
-   * Update the "First Player" select options based on game mode (PvP vs PvC).
-   */
   updateFirstPlayerOptions() {
     const { gameModeInput, firstPlayerInput } = this.elements;
     if (!gameModeInput || !firstPlayerInput) return;
@@ -373,9 +350,6 @@ export default class UIManager {
     }
   }
 
-  /**
-   * If the scoreboard panel is open, close it and reset the button icon.
-   */
   closeScoreboardPanelIfOpen() {
     const { scoreboardPanel, scoreboardBtn } = this.elements;
     if (!scoreboardPanel) return;
@@ -383,9 +357,6 @@ export default class UIManager {
     if (scoreboardBtn) scoreboardBtn.innerHTML = '🏆';
   }
 
-  /**
-   * Ensure scoreboard panel is visible and accessible.
-   */
   hardShowScoreboard() {
     const { scoreboardPanel } = this.elements;
     if (!scoreboardPanel) return;
@@ -393,26 +364,15 @@ export default class UIManager {
     scoreboardPanel.removeAttribute('aria-hidden');
   }
 
-  /**
-   * Open scoreboard panel
-   */
   openScoreboardPanel(boardSize) {
     this.hardShowScoreboard();
-
-    // OFFLINE por defeito
     this.scoreManager.updateScoreboardView();
-
-    // Tabs
     this.setupScoreboardTabs(
       () => this.scoreManager.updateScoreboardView(),
       () => this.scoreManager.loadOnlineRanking(boardSize)
     );
-}
+  }
 
-
-  /**
-   * Handle setting change during game
-   */
   handleSettingChange() {
     const { msgEl } = this.elements;
     if (window.game) {
@@ -427,9 +387,6 @@ export default class UIManager {
     }
   }
 
-  /**
-   * Restore message before settings change
-   */
   restoreMessageBeforeSettings() {
     if (this.lastGameMessageBeforeSettings) {
       this.setMessage(this.lastGameMessageBeforeSettings);
@@ -437,9 +394,6 @@ export default class UIManager {
     }
   }
 
-  /**
-   * Clear game UI elements for cleanup
-   */
   clearGameUI() {
     const { boardEl, sticksEl, rollBtn } = this.elements;
     if (boardEl) boardEl.innerHTML = '';
@@ -448,15 +402,13 @@ export default class UIManager {
     this.hide(sticksEl);
   }
 
-  /**
-   * Get UI elements for external access
-   */
   getElements() {
     return this.elements;
   }
 
   /**
-   * Enable or disable the Pass Turn button
+   * Enable or disable the Pass Turn button.
+   * Logic for opacity/cursor is now handled by CSS based on classes/disabled state.
    */
   updatePassBtn(enabled) {
     const { passTurnBtn } = this.elements;
@@ -471,19 +423,12 @@ export default class UIManager {
     if (enabled) {
       passTurnBtn.classList.remove('btn-ghost');
       passTurnBtn.classList.add('btn-primary');
-      passTurnBtn.style.opacity = "1";
-      passTurnBtn.style.cursor = "pointer";
     } else {
       passTurnBtn.classList.remove('btn-primary');
       passTurnBtn.classList.add('btn-ghost');
-      passTurnBtn.style.opacity = "0.5";
-      passTurnBtn.style.cursor = "not-allowed";
     }
   }
 
-  /**
-   * Setup the scoreboard tabs (Offline / Online)
-   */
   setupScoreboardTabs(onOffline, onOnline) {
     const offlineBtn = document.getElementById("score-tab-offline");
     const onlineBtn = document.getElementById("score-tab-online");

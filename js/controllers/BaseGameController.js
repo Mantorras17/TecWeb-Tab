@@ -84,10 +84,8 @@ export default class BaseGameController {
     const loserPlayer = (winner === this.game.players[0]) ? this.game.players[1] : this.game.players[0];
     this.scoreManager.updateScore(winnerName, loserPlayer.name);
 
-    let display = winnerName === 'player1' ? 'Player 1' : (winnerName === 'cpu' ? 'CPU' : 'Player 2');
-    
-    this.sticksRenderer.msgAfterFlip(`Game Over! ${winnerDisplay} won!`);
-    this.sticksRenderer.msgAfterFlip(`Game Over! ${display} won!`);
+    const winnerDisplay = winnerName === 'player1' ? 'Player 1' : (winnerName === 'player2' ? 'Player 2' : 'CPU');
+    this.uiManager.setMessage(`${winnerDisplay} wins the game!`);
 
     this.uiManager.setBoardDisabled(true);
     setTimeout(() => {

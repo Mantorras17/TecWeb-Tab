@@ -4,10 +4,10 @@ export default class ScoreManager {
     this.uiManager = uiManager;
     this.serverManager = serverManager;
     
-    // Key used to save data in the browser
+    // Chave para guardar a pontuação local no browser
     this.STORAGE_KEY = 'tablut_local_scores';
 
-    // Try to load saved scores, otherwise use defaults
+    // Carregar dados locais (se existirem)
     const savedData = localStorage.getItem(this.STORAGE_KEY);
 
     if (savedData) {
@@ -21,23 +21,37 @@ export default class ScoreManager {
     }
   }
 
-  // Helper to save current scores to browser memory
+  // Função auxiliar para guardar no localStorage
   saveToStorage() {
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.scores));
   }
 
-  // ------------------------------------------------------------
-  // OFFLINE SCOREBOARD
-  // ------------------------------------------------------------
+  // ============================================================
+  // TABELA 1: SCOREBOARD LOCAL (Player 1 vs CPU)
+  // ============================================================
 
   updateScore(winnerName, loserName) {
-    if (this.scores[winnerName]) this.scores[winnerName].wins++;
-    if (this.scores[loserName]) this.scores[loserName].losses++;
-    
-    // Save to storage immediately after updating
-    this.saveToStorage();
-    
-    this.updateScoreboardView();
+    let updated = false;
+
+    // Verificar se o vencedor é Local (Player 1, Player 2 ou CPU)
+    if (this.scores[winnerName]) {
+      this.scores[winnerName].wins++;
+      updated = true;
+    }
+
+    // Verificar se o perdedor é Local
+    if (this.scores[loserName]) {
+      this.scores[loserName].losses++;
+      updated = true;
+    }
+
+    // IMPORTANTE: Se o jogo foi Online (ex: contra "Danny"), os nomes não 
+    // existem no this.scores, por isso 'updated' será false e não fazemos nada.
+    // Isto impede os erros e crashes.
+    if (updated) {
+      this.saveToStorage();
+      this.updateScoreboardView();
+    }
   }
 
   updateScoreboardView() {
@@ -46,15 +60,17 @@ export default class ScoreManager {
 
     if (!scoreboardBody) return;
 
+    // Lógica de visualização: Esconder Online, Mostrar Local
     const container = document.getElementById('leaderboard-content');
     if (container) {
       const onlinePanel = container.querySelector('#leaderboard-online');
-      if (onlinePanel) onlinePanel.remove(); // Remove online view if present
+      if (onlinePanel) onlinePanel.hidden = true;
       
       const localPanel = container.querySelector('#leaderboard-local');
-      if (localPanel) localPanel.hidden = false; // Show local panel
+      if (localPanel) localPanel.hidden = false;
     }
 
+    // Limpar e preencher a tabela LOCAL
     scoreboardBody.innerHTML = '';
 
     const stats = [
@@ -72,8 +88,7 @@ export default class ScoreManager {
       const row = scoreboardBody.insertRow();
       row.innerHTML = `
         <td>${index + 1}</td>
-        <td>${stat.name}</td>
-        <td>${stat.wins}</td>
+        <td>${stat.name}</td> <td>${stat.wins}</td>
         <td>${stat.losses}</td>
         <td>${getRatio(stat.wins, stat.losses)}</td>
       `;
@@ -81,31 +96,15 @@ export default class ScoreManager {
   }
 
 
-  // ------------------------------------------------------------
-  // ONLINE SCOREBOARD
-  // ------------------------------------------------------------
+  // ============================================================
+  // TABELA 2: SCOREBOARD ONLINE (Nicknames)
+  // ============================================================
 
   async loadOnlineRanking(boardSize) {
     const container = document.getElementById("leaderboard-content");
     if (!container) return;
 
-    try {
-      const resp = await this.serverManager.ranking(this.serverManager.GROUP_ID, boardSize);
-
-      const list = Array.isArray(resp) ? resp : (resp && resp.ranking) ? resp.ranking : [];
-      this.renderOnlineRanking(list);
-
-    } catch (err) {
-      container.innerHTML = `<p class="error">Error loading ranking: ${err.message || err}</p>`;
-      console.error("Ranking error:", err);
-    }
-  }
-
-  renderOnlineRanking(list) {
-    const container = document.getElementById("leaderboard-content");
-    if (!container) return;
-
-    // Toggle visibility using hidden attribute
+    // Preparar UI: Esconder local, preparar online
     const localPanel = container.querySelector('#leaderboard-local');
     if (localPanel) localPanel.hidden = true;
 
@@ -116,21 +115,63 @@ export default class ScoreManager {
       onlinePanel.id = 'leaderboard-online';
       container.appendChild(onlinePanel);
     }
+    
+    onlinePanel.hidden = false;
+    onlinePanel.innerHTML = "<p>Loading ranking...</p>";
+
+    try {
+      const resp = await this.serverManager.request("ranking", {
+        group: this.serverManager.GROUP_ID,
+        size: boardSize
+      });
+
+      // O servidor devolve uma lista de objetos com { nick, games, victories }
+      const list = Array.isArray(resp) ? resp : (resp && resp.ranking) ? resp.ranking : [];
+      this.renderOnlineRanking(list);
+
+    } catch (err) {
+      if (onlinePanel) {
+        onlinePanel.innerHTML = `<p class="error">Error loading ranking: ${err.message || err}</p>`;
+      }
+      console.error("Ranking error:", err);
+    }
+  }
+
+  renderOnlineRanking(list) {
+    const container = document.getElementById("leaderboard-content");
+    if (!container) return;
+
+    // Garantir que estamos a mostrar o painel Online
+    const localPanel = container.querySelector('#leaderboard-local');
+    if (localPanel) localPanel.hidden = true;
+
+    let onlinePanel = container.querySelector('#leaderboard-online');
+    if (!onlinePanel) {
+      onlinePanel = document.createElement('div');
+      onlinePanel.className = 'leaderboard-panel';
+      onlinePanel.id = 'leaderboard-online';
+      container.appendChild(onlinePanel);
+    }
+    onlinePanel.hidden = false;
 
     if (!list || list.length === 0) {
       onlinePanel.innerHTML = "<p>No ranking data available.</p>";
       return;
     }
 
-    // Clean table HTML
+    // Criar a tabela ONLINE (com coluna Nick)
     onlinePanel.innerHTML = `
       <table class="scoreboard-table">
-        <thead><tr><th>Nick</th><th>Games</th><th>Victories</th></tr></thead>
+        <thead>
+            <tr>
+                <th>Nick</th>    <th>Games</th>
+                <th>Victories</th>
+            </tr>
+        </thead>
         <tbody>
         ${list.map(r => `
           <tr>
-            <td>${r.nick}</td>
-            <td>${r.games}</td>
+            <td>${r.nick}</td> <td>${r.games}</td>
             <td>${r.victories}</td>
           </tr>
         `).join("")}

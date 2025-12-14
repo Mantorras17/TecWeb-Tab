@@ -81,18 +81,33 @@ export default class BaseGameController {
    */
   handleGameOver(winner) {
     const winnerName = winner.name;
-    const loserPlayer = (winner === this.game.players[0]) ? this.game.players[1] : this.game.players[0];
+    
+    // FIX: Comparar Strings (Nomes) em vez de Objetos
+    // Isto resolve o problema do Online onde o objeto 'winner' é diferente do objeto local
+    const loserPlayer = (winnerName === this.game.players[0].name) 
+        ? this.game.players[1] 
+        : this.game.players[0];
+    
     this.scoreManager.updateScore(winnerName, loserPlayer.name);
 
-    const winnerDisplay = winnerName === 'player1' ? 'Player 1' : (winnerName === 'player2' ? 'Player 2' : 'CPU');
+    // FIX: Mostrar o nome correto (se for online mostra o Nick, se for local mostra o P1/P2/CPU)
+    let winnerDisplay = winnerName;
+    if (winnerName === 'player1') winnerDisplay = 'Player 1';
+    else if (winnerName === 'player2') winnerDisplay = 'Player 2';
+    else if (winnerName === 'cpu') winnerDisplay = 'CPU';
+
     this.uiManager.setMessage(`${winnerDisplay} wins the game!`);
-    const cols = this.game ? this.game.columns : undefined;
+
     this.uiManager.setBoardDisabled(true);
+    
+    // Guardar tamanho do tabuleiro para reabrir o ranking corretamente
+    const boardCols = this.game ? this.game.columns : 5;
+
     setTimeout(() => {
         this.cleanup();
         this.uiManager.showGame();
         this.uiManager.openSidePanel();
-        this.uiManager.openScoreboardPanel(cols);
+        this.uiManager.openScoreboardPanel(boardCols);
     }, TIMING.gameOverCleanupMs);
   }
 
@@ -139,38 +154,6 @@ export default class BaseGameController {
         this.uiManager.setCloseBlocked(true);
       }
     }, 3000);
-  }
-
-  /**
-   * Check if player has any valid moves for current stick value
-   */
-  hasAnyValidMoves() {
-    if (!this.game || this.game.stickValue === null) return false;
-    
-    const player = this.game.getCurrentPlayer();
-    
-    for (const piece of player.pieces) {
-      const moves = this.game.possibleMoves(piece, this.game.stickValue);
-      if (moves.length > 0) return true;
-    }
-    
-    return false;
-  }
-
-  /**
-   * Load and render offline scores
-   */
-  loadOfflineScores() {
-      if (!this.scoreManager) return;
-      const scores = this.scoreManager.getOfflineScores();
-      this.uiManager.renderOfflineScoreboard(scores);
-  }
-
-  /**
-   * Load and render online scores (implemented in OnlineGameController)
-   */
-  async loadOnlineScores() {
-      // Override in OnlineGameController
   }
 
   /**

@@ -1,5 +1,4 @@
 // OnlinePvPGameController.js - Online Multiplayer
-import BaseGameController from './BaseGameController.js';
 import TabGame from '../classes/Tabgame.js';
 import Piece from '../classes/Piece.js';
 import { TIMING, ROLL_NAMES } from '../constants/Constants.js';
@@ -41,6 +40,7 @@ export default class OnlinePvPGameController {
     }
 
     const cols = elements.sizeInput ? parseInt(elements.sizeInput.value, 10) || 9 : 9;
+
     const { nick, pass } = this.serverManager.state;
     if (!nick) {
         alert("Login required!");
@@ -73,6 +73,33 @@ export default class OnlinePvPGameController {
   handleServerUpdate(data) {
   try {
     console.log("Server Update:", data);
+
+    // --- 0) WINNER (PRIORIDADE MÁXIMA) ---
+    // Verificamos isto PRIMEIRO. Se alguém ganhou, não queremos saber de erros ou updates de peças.
+    if (data.winner) {
+      // Se não temos o jogo iniciado, não podemos processar o vencedor corretamente, 
+      // mas tentamos mostrar a mensagem na mesma.
+      if (!this.game) {
+         this.uiManager.setMessage(`Game Over! Winner: ${data.winner}`);
+         return;
+      }
+
+      const winner = this.game.players.find(p => p && p.name === data.winner);
+      if (winner) {
+        this.handleGameOver(winner);
+      } else {
+        // Fallback: cria objeto temporário se não encontrar player
+        this.handleGameOver({ name: data.winner });
+      }
+
+      if (this.serverManager) {
+         if (typeof this.serverManager.closeUpdate === 'function') this.serverManager.closeUpdate();
+         else if (typeof this.serverManager.stopListening === 'function') this.serverManager.stopListening();
+      }
+      return; // Sai da função imediatamente para não processar mais nada
+    }
+
+    // --- AGORA sim verificamos erros ---
     if (data.error) {
       this.uiManager.setMessage("Error: " + data.error);
       return;
@@ -80,18 +107,15 @@ export default class OnlinePvPGameController {
 
     const myNick = this.serverManager.state.nick;
 
-    // Store mustPass in shared state so UI logic can rely on server's authoritative value
     if ('mustPass' in data) {
-      // server sends either null or the nick of the player who must pass
       this.serverManager.state.mustPass = data.mustPass;
     } else if (this.serverManager && this.serverManager.state && typeof this.serverManager.state.mustPass !== 'undefined') {
-      // clear previous mustPass when server does not send it
       delete this.serverManager.state.mustPass;
     }
 
-    // --- 1) INICIALIZAÇÃO DO JOGO (quando ainda não existe this.game) ---
+    // --- 1) INICIALIZAÇÃO DO JOGO ---
     if (data.pieces && !this.game) {
-      const size = Math.max(3, Math.floor((data.pieces.length || 0) / 4)); // defensivo
+      const size = Math.max(3, Math.floor((data.pieces.length || 0) / 4));
       this.game = new TabGame(size);
       window.game = this.game;
       this.game.isOnline = true;
@@ -100,13 +124,10 @@ export default class OnlinePvPGameController {
       const myColor = (data.players && data.players[myNick]) ? data.players[myNick] : "Blue";
       const amIPlayer1 = (myColor === "Blue");
 
-      // garante que existam 2 players
       if (!this.game.players || this.game.players.length < 2) {
-        // tenta criar jogadores caso a classe TabGame não os tenha inicializado como esperado
         this.game.players = [this.game.players[0] || { pieces: [] }, this.game.players[1] || { pieces: [] }];
       }
 
-      // configurar nomes/skins/startRow
       this.game.players[0].name = myNick;
       this.game.players[0].skin = amIPlayer1 ? 'blue' : 'red';
       this.game.players[0].startRow = amIPlayer1 ? 3 : 0;
@@ -118,7 +139,6 @@ export default class OnlinePvPGameController {
 
       this.serverManager.state.color = myColor;
 
-      // UI: mostrar botões & tabuleiro
       const els = this.uiManager.getElements();
       this.uiManager.show(els.rollBtn);
       this.uiManager.show(els.passTurnBtn);
@@ -131,46 +151,33 @@ export default class OnlinePvPGameController {
 
     if (!this.game) return;
 
-    // --- 2) SINCRONIZAR pieces quando o servidor envia pieces (apenas após confirmação) ---
-    // Só recarregamos se:
-    // - Inicialização (já foi feita acima em section 1) 
-    // - Turn changed (data.turn foi enviado, o que significa nova jogada confirmada)
-    // - Evitar recarregar no meio de uma seleção (step === "to")
-    if (data.pieces && data.turn) {  // <-- MUDA: só sincroniza se o server envia turn também
+    // --- 2) SINCRONIZAR pieces ---
+    if (data.pieces && data.turn) {
       const piecesArray = Array.isArray(data.pieces) ? data.pieces : [];
 
-      // Clear local pieces arrays de forma segura
       if (!this.game.players || this.game.players.length < 2) {
         this.game.players = [this.game.players[0] || { pieces: [] }, this.game.players[1] || { pieces: [] }];
       }
       this.game.players[0].pieces = [];
       this.game.players[1].pieces = [];
 
-      // Reconstroi as peças conforme o servidor
       const serverMyColor = this.serverManager.state.color || (data.players && data.players[Object.keys(data.players)[0]]);
 
       piecesArray.forEach((p, index) => {
-        if (!p) return; // casa vazia
+        if (!p) return;
 
         const coords = this.getCoordsFromIndex(index, this.game.columns);
         if (!coords || typeof coords.row !== 'number' || typeof coords.col !== 'number') {
-          console.warn("Invalid coords for index", index, coords);
           return;
         }
 
-        // Owner: se a cor do objecto for igual à cor que o servidor disse ser "minha"
         const owner = (p.color && serverMyColor && p.color === serverMyColor) ? this.game.players[0] : this.game.players[1];
-        if (!owner) {
-          console.warn("Owner undefined for piece", p, index);
-          return;
-        }
+        if (!owner) return;
 
-        // Criar peça e ajustar estado
         const newPiece = new Piece(owner, coords.row, coords.col);
         if (p.reachedLastRow) newPiece.state = 'last-row';
         else if (p.inMotion) newPiece.state = 'moved';
 
-        // Adicionar peça ao owner
         if (typeof owner.addPiece === 'function') {
           owner.addPiece(newPiece);
         } else {
@@ -179,39 +186,33 @@ export default class OnlinePvPGameController {
         }
       });
 
-      // O servidor confirmou a jogada — limpa seleção local
       if (typeof this.game.clearSelection === 'function') this.game.clearSelection();
 
-      // Reconstruir UI e habilitar botão Pass (aguardando que o jogador clique)
       this.uiManager.buildBoard(this.game);
       this.uiManager.updateBoardHighlights(this.game);
-      this.renderAll(); // Atualiza botões, incluindo Pass Button
+      this.renderAll(); 
     }
 
-    // --- 3) Atualização do turno (turn) ---
+    // --- 3) Atualização do turno ---
     if (data.turn) {
       const isMyTurn = (data.turn === myNick);
       const idx = this.game.players.findIndex(p => p && p.name === data.turn);
       this.game.curPlayerIdx = (idx >= 0) ? idx : 0;
 
-      // Reset local de estado de turno (servidor decide o resto)
       this.game.stickValue = null;
       this.game.waitingForPass = false;
 
-      // atualizar UI (pass/roll controlados pelo servidor em online)
       this.renderAll();
       this.uiManager.setMessage(isMyTurn ? "Your Turn! Roll the sticks." : `Waiting for ${data.turn}...`);
     }
 
     // --- 4) Dados (dice) ---
     if (data.dice) {
-      // Se o servidor envia um objecto dice com value -> usamos; se for null -> limpa stickValue
       if (data.dice && typeof data.dice.value === 'number') {
         const rollValue = data.dice.value;
         this.game.stickValue = rollValue;
         this.game.lastStickValue = rollValue;
 
-        // Store keepPlaying flag from server so client knows re-roll is allowed
         if (this.serverManager && this.serverManager.state) {
           this.serverManager.state.keepPlaying = !!data.dice.keepPlaying;
         }
@@ -227,22 +228,17 @@ export default class OnlinePvPGameController {
             const isBonusRoll = [1, 4, 6].includes(rollValue);
 
             if (!hasMoves) {
-              // Se é roll de bónus (1,4,6) sem movimentos → pode rodar outra vez
               if (isBonusRoll) {
                 this.uiManager.setMessage(`No moves with ${rollValue} (Bonus). Roll again!`);
                 this.game.waitingForPass = false;
                 this.renderAll({ updateSticks: false });
                 return;
               }
-              
-              // Se não é bónus (2,3,5) sem movimentos → deve fazer pass
               this.uiManager.setMessage(`No moves available. Click "Pass Turn".`);
               this.game.waitingForPass = true;
               this.renderAll({ updateSticks: false });
               return;
             }
-            
-            // Tem movimentos → seleciona uma peça
             this.game.waitingForPass = false;
             this.sticksRenderer.msgAfterFlip("Choose a piece to move!", 600);
             this.renderAll({ updateSticks: false });
@@ -251,7 +247,6 @@ export default class OnlinePvPGameController {
           }
         });
       } else {
-        // dice === null -> já foi usado, limpar estado local
         this.game.stickValue = null;
         if (this.serverManager && this.serverManager.state) {
           this.serverManager.state.keepPlaying = false;
@@ -259,25 +254,21 @@ export default class OnlinePvPGameController {
         this.renderAll({ updateSticks: false });
       }
 
-      // mustPass (se presente) controla botão de pass — state já actualizado acima
       if ('mustPass' in data) {
         this.uiManager.updatePassBtn(data.mustPass === myNick);
       }
     }
 
-    // --- 5) selected / step: sincronizar seleção (opcional, muestra origen / posibles destinos) ---
+    // --- 5) selected / step ---
     if (Array.isArray(data.selected) && data.selected.length >= 0) {
-      // Guardar o índice da origem (se o servidor enviar 'cell' como origem)
       if (typeof data.cell === 'number') {
         this.serverManager.state.selectedFromIndex = data.cell;
       }
 
       if (data.step === "to") {
-        // Mostrar destinos válidos (server já decidiu as casas)
         const destinations = data.selected.map(idx => this.getCoordsFromIndex(idx, this.game.columns))
                                         .filter(d => d && typeof d.row === 'number');
 
-        // Tentar definir a peça localmente (se existir) para highlight visual
         if (typeof this.serverManager.state.selectedFromIndex === 'number') {
           const origin = this.getCoordsFromIndex(this.serverManager.state.selectedFromIndex, this.game.columns);
           const piece = this.game.getCurrentPlayer().getPieceAt(origin.row, origin.col)
@@ -290,22 +281,11 @@ export default class OnlinePvPGameController {
         this.game.selectedMoves = destinations;
         this.uiManager.updateBoardHighlights(this.game);
         this.uiManager.setMessage("Opponent selected a piece — waiting for their move...");
-          } else if (data.step === "from") {
-            // Estamos na fase de escolher a peça: limpar qualquer seleção local pendente
-            this.game.clearSelection();
-            this.uiManager.updateBoardHighlights(this.game);
-            // apagar stored selectedFromIndex pois voltou ao estado 'from'
-            delete this.serverManager.state.selectedFromIndex;
-      }
-    }
-
-    // --- 6) Winner ---
-    if (data.winner) {
-      const winner = this.game.players.find(p => p && p.name === data.winner);
-      if (winner) {
-        this.handleGameOver(winner);
-      } else {
-        this.uiManager.setMessage(`${data.winner} won!`);
+      } else if (data.step === "from") {
+        this.game.clearSelection();
+        this.uiManager.updateBoardHighlights(this.game);
+        this.uiManager.setMessage("Choose a piece to move...");
+        delete this.serverManager.state.selectedFromIndex;
       }
     }
 
@@ -342,10 +322,8 @@ export default class OnlinePvPGameController {
     if (!currentPlayer) return false;
     if (currentPlayer.name !== this.serverManager.state.nick) return false;
 
-    // If no stick value yet, can roll
     if (this.game.stickValue == null) return true;
 
-    // If stickValue present, allow re-roll only when server signalled keepPlaying and there are no valid moves
     const keepPlaying = this.serverManager && this.serverManager.state && !!this.serverManager.state.keepPlaying;
     if (keepPlaying && !this.hasAnyValidMoves()) return true;
 
@@ -390,11 +368,14 @@ export default class OnlinePvPGameController {
     const cellIndex = this.getIndexFromCoords(row, col, this.game.columns);
     const pieceAtClick = currentPlayer.getPieceAt(row, col);
 
-    // --- Clique numa peça: seleção LOCAL apenas (SEM notify) ---
+    // --- A) Selecionar Peça Própria ---
     if (pieceAtClick) {
       const moves = this.game.selectPieceAt(row, col);
       if (!moves || moves.length === 0) {
         this.uiManager.setMessage("That piece has no valid moves.");
+        this.localSelectedFromIndex = null;
+        this.game.clearSelection();
+        this.uiManager.updateBoardHighlights(this.game);
         return;
       }
 
@@ -404,13 +385,45 @@ export default class OnlinePvPGameController {
       return;
     }
 
-    // --- Clique numa célula vazia (destino) ---
+    // --- B) Mover para Destino ---
     if (this.localSelectedFromIndex != null) {
+      
+      // Validação Local antes de enviar
+      const origin = this.getCoordsFromIndex(this.localSelectedFromIndex, this.game.columns);
+      const selectedPiece = currentPlayer.getPieceAt(origin.row, origin.col);
+
+      if (!selectedPiece) {
+        this.localSelectedFromIndex = null;
+        this.game.clearSelection();
+        this.uiManager.updateBoardHighlights(this.game);
+        return;
+      }
+
+      const validMoves = this.game.possibleMoves(selectedPiece, this.game.stickValue);
+      const isValidMove = validMoves.some(m => m.row === row && m.col === col);
+
+      if (!isValidMove) {
+        this.uiManager.setMessage("Invalid move! Selection cleared.");
+        this.localSelectedFromIndex = null;
+        this.game.clearSelection();
+        this.uiManager.updateBoardHighlights(this.game);
+        return;
+      }
+
       const destIndex = cellIndex;
       this.uiManager.setMessage("Sending move to server...");
+      
       try {
-        // Send origin first and wait for server to acknowledge step 'to'
         await this.serverManager.notify(nick, pass, gameId, this.localSelectedFromIndex);
+        await this.serverManager.notify(nick, pass, gameId, destIndex);
+      } catch (err) {
+        // FIX: Se o notify falhar, mas o jogo já tiver acabado (over), não mostramos erro.
+        // O servidor pode ter terminado o jogo após o notify e enviado o winner.
+        if (this.game && this.game.over) {
+            console.log("Ignored notify error because game is over:", err.message);
+        } else {
+            this.uiManager.setMessage("Error: " + (err.message || err));
+        }
       } finally {
         this.localSelectedFromIndex = null;
         this.game.clearSelection();
@@ -419,7 +432,7 @@ export default class OnlinePvPGameController {
       return;
     }
 
-    this.uiManager.setMessage("Action not allowed right now. Wait for server.");
+    this.uiManager.setMessage("Select a piece first.");
   }
 
 
@@ -443,18 +456,31 @@ export default class OnlinePvPGameController {
   async handleQuit() {
     const confirmed = await this.modalManager.showModal(
       'Quit?',
-      'Are you sure you want to quit? This action will count as a loss.',
+      'Are you sure you want to quit? Leaving will forfeit the match.',
       'Yes, quit',
       'No, cancel'
     );
     if (!confirmed) return;
 
     if (this.serverManager.state.active) {
-      await this.serverManager.leave(this.serverManager.state.nick, this.serverManager.state.pass, this.serverManager.state.gameId);
-    } 
-    this.uiManager.setMessage('You left the game.');
-    const size = this.game ? this.game.columns : 9;
-    this.scoreManager.loadOnlineRanking(size)
+      await this.serverManager.leave(
+        this.serverManager.state.nick,
+        this.serverManager.state.pass,
+        this.serverManager.state.gameId
+      );
+      this.serverManager.clearGame();
+    }
+    
+    this.cleanupGame();
+    this.uiManager.setMessage('Left the game.');
+    this.uiManager.closeSidePanel();
+    
+    setTimeout(() => {
+      if (!window.game) {
+        this.uiManager.setMessage('Choose the configurations and click "Start" to play the game.');
+        this.uiManager.setCloseBlocked(true);
+      }
+    }, 3000);
   }
 
   updateRollBtn() {
@@ -466,7 +492,6 @@ export default class OnlinePvPGameController {
     const isMyTurn = this.game.getCurrentPlayer().name === this.serverManager.state.nick;
     const myNick = this.serverManager.state.nick;
 
-    // Only allow passing when server explicitly signals mustPass (contains the nick of the player who must pass)
     if (this.serverManager && this.serverManager.state && typeof this.serverManager.state.mustPass !== 'undefined') {
       const canPass = isMyTurn && this.serverManager.state.mustPass === myNick;
       this.uiManager.updatePassBtn(canPass);
@@ -474,7 +499,6 @@ export default class OnlinePvPGameController {
       return;
     }
 
-    // Otherwise, do not allow pass (online client defers to server)
     this.uiManager.updatePassBtn(false);
     this.uiManager.setBoardDisabled(!isMyTurn);
   }
@@ -492,9 +516,18 @@ export default class OnlinePvPGameController {
     this.updateRollBtn();
     this.updatePassBtn();
 
-    // Online: rotate board if I'm the red player (startRow=0)
     const forceRotate = this.game.isOnline && (this.game.players[0].startRow === 0);
     this.uiManager.updateBoardRotation(this.game, forceRotate);
+  }
+
+  checkGameOver() {
+    if (!this.game) return false;
+    const { over, winner } = this.game.checkGameOver();
+    if (over) {
+      this.handleGameOver(winner);
+      return true;
+    }
+    return false;
   }
 
   handleGameOver(winner) {
@@ -502,23 +535,31 @@ export default class OnlinePvPGameController {
 
     const winnerName = winner.name;
     
+    // FIX: Comparar Strings
+    const loserPlayer = (winnerName === this.game.players[0].name) 
+        ? this.game.players[1] 
+        : this.game.players[0];
+    const loserName = loserPlayer.name;
+
+    this.scoreManager.updateScore(winnerName, loserName);
+    
+    // Mostra a mensagem no topo da tela também para garantir
+    this.uiManager.setMessage(`Game Over! ${winnerName} won!`);
     this.sticksRenderer.msgAfterFlip(`Game Over! ${winnerName} won!`);
 
     const elements = this.uiManager.getElements();
     if (elements.rollBtn) elements.rollBtn.disabled = true;
     this.uiManager.setBoardDisabled(true);
     this.uiManager.hide(elements.sticksEl);
-    const cols = this.game ? this.game.columns : undefined;
-    this.uiManager.openScoreboardPanel(cols);
-    this.scoreManager.loadOnlineRanking(cols);
+    this.openScoreboardPanel();
+
     setTimeout(() => {
       this.cleanupGame();
-      this.serverManager.closeUpdate();
       this.uiManager.showGame();
       this.uiManager.openSidePanel();
       this.uiManager.setMessage('Choose the configurations and click "Start" to play the game.');
       this.uiManager.setCloseBlocked(true);
-      this.uiManager.openScoreboardPanel(cols);
+      this.openScoreboardPanel();
     }, TIMING.gameOverCleanupMs);
   }
 
@@ -533,57 +574,35 @@ export default class OnlinePvPGameController {
     return this.game;
   }
 
+  openScoreboardPanel() {
+    this.uiManager.openScoreboardPanel(this.game.columns);
+  }
+
   getIndexFromCoords(r, c, cols) {
-  // Mapeamento zig-zag para corresponder ao formato do servidor
-  let indexBase = 0;
-  if (r === 3) indexBase = 0;
-  if (r === 2) indexBase = cols;
-  if (r === 1) indexBase = 2 * cols;
-  if (r === 0) indexBase = 3 * cols;
+    let indexBase = 0;
+    if (r === 3) indexBase = 0;
+    if (r === 2) indexBase = cols;
+    if (r === 1) indexBase = 2 * cols;
+    if (r === 0) indexBase = 3 * cols;
 
-  let offset = c;
-  // Nas linhas 2 e 0 o eixo de colunas vai em sentido contrário
-  if (r === 2 || r === 0) offset = (cols - 1) - c;
-  return indexBase + offset;
-}
+    let offset = c;
+    if (r === 2 || r === 0) offset = (cols - 1) - c;
+    return indexBase + offset;
+  }
 
-getCoordsFromIndex(index, cols) {
-  // Inverte o cálculo para obter (row,col) a partir do índice linear do servidor
-  const rowIdx = Math.floor(index / cols);
-  const offset = index % cols;
-  let r = 3 - rowIdx;
-  let c = offset;
-  // Ajuste espelho para as linhas 2 e 0
-  if (r === 2 || r === 0) c = (cols - 1) - offset;
-  return { row: r, col: c };
-}
+  getCoordsFromIndex(index, cols) {
+    const rowIdx = Math.floor(index / cols);
+    const offset = index % cols;
+    let r = 3 - rowIdx;
+    let c = offset;
+    if (r === 2 || r === 0) c = (cols - 1) - offset;
+    return { row: r, col: c };
+  }
 
   clearMessageTimer() {
     if (this.messageTimer) {
       clearTimeout(this.messageTimer);
       this.messageTimer = null;
     }
-  }
-
-  /**
-   * Waits for the server to set `serverManager.state.step` to `targetStep`.
-   * Polls state every 100ms until `timeoutMs` elapses. Returns true if
-   * the expected step was observed, false on timeout.
-   */
-  async waitForServerStep(targetStep, timeoutMs = 2000) {
-    const start = Date.now();
-    const pollInterval = 100;
-
-    while ((Date.now() - start) < timeoutMs) {
-      try {
-        if (this.serverManager && this.serverManager.state && this.serverManager.state.step === targetStep) {
-          return true;
-        }
-      } catch (e) {
-        // defensive: ignore transient read errors and continue polling
-      }
-      await new Promise(res => setTimeout(res, pollInterval));
-    }
-    return false;
   }
 }

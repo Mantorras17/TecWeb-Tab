@@ -3,12 +3,16 @@ const crypto = require('crypto');
 const path = require('path');
 
 class GameManager {
-  constructor() {
+  constructor(rankingManager) {
+    this.rankingManager = rankingManager;
     this.dataDir = path.join(__dirname, '../data');
     this.gamesFile = path.join(this.dataDir, 'games.json');
     this.games = new Map();
-    this.waitingPlayers = new Map(); // "group-size" -> {nick, time}
+    this.waitingPlayers = new Map(); // "group-size" -> { nick, gameId, time }
     this.sseListeners = new Map(); // gameId -> Map(nick -> res)
+    this.timeoutMs = 2 * 60 * 1000; // 2 minutes
+    this.monitorIntervalMs = 1000;
+    this.timeoutTimer = setInterval(() => this.checkTimeouts(), this.monitorIntervalMs);
     this.init();
   }
 
@@ -29,15 +33,54 @@ class GameManager {
     return crypto.createHash('md5').update(data).digest('hex');
   }
 
+  async checkTimeouts() {
+    const now = Date.now();
+    for (const [gameId, game] of this.games.entries()) {
+      if (!game || game.winner) continue;
+      const last = game.lastMoveTime || 0;
+      const elapsed = now - last;
+      if (elapsed >= this.timeoutMs) {
+        const timedOutPlayer = game.currentPlayer;
+        if (!timedOutPlayer) continue;
+
+        const opponent = game.players.find(p => p !== timedOutPlayer);
+        game.winner = opponent;
+        game.currentPlayer = null;
+
+        try {
+          if (this.rankingManager) {
+            await this.rankingManager.updatePlayerStats(
+              game.group,
+              game.size,
+              opponent,
+              timedOutPlayer
+            );
+          }
+        } catch (e) {
+          console.error(`Ranking update failed for timeout in game ${gameId}:`, e);
+        }
+
+        this.broadcast(gameId, { winner : opponent });
+
+        try {
+          await this.save();
+        } catch (e) {
+          console.error(`Failed to save game state after timeout in game ${gameId}:`, e);
+        }
+      }
+    }
+  }
+
   async joinGame(group, nick, size) {
     const key = `${group}-${size}`;
 
     // Check for waiting player
     if (this.waitingPlayers.has(key)) {
-      const opponent = this.waitingPlayers.get(key);
+      const waiting = this.waitingPlayers.get(key);
       this.waitingPlayers.delete(key);
 
-      const gameId = this.generateGameId(group, size, [nick, opponent]);
+      const opponent = waiting.nick;
+      const gameId = waiting.gameId;
       const game = {
         id: gameId,
         group,
@@ -70,9 +113,9 @@ class GameManager {
 
       return { success: true, gameId };
     } else {
-      // Wait for opponent
-      this.waitingPlayers.set(key, nick);
-      return { success: true, gameId: null }; // Return null for waiting
+      const gameId = this.generateGameId(group, size, [nick]);
+      this.waitingPlayers.set(key, { nick, gameId, time: Date.now() });
+      return { success: true, gameId };
     }
   }
 
@@ -87,6 +130,177 @@ class GameManager {
       pieces[i] = { color: 'Red', inMotion: false, reachedLastRow: false };
     }
     return pieces;
+  }
+
+  getRowCol(cell, size) {
+    const row = Math.floor(cell / size);
+    const col = cell % size;
+    return { row, col };
+  }
+
+  getCell(row, col, size) {
+    return row * size + col;
+  }
+
+  getNextCell(fromCell, steps, size) {
+    const { row, col } = this.getRowCol(fromCell, size);
+    let currentRow = row;
+    let currentCol = col;
+    let remaining = steps;
+
+    while (remaining > 0) {
+      // Row 0 (bottom) and Row 2: move left to right
+      if (currentRow === 0 || currentRow === 2) {
+        if (currentCol + remaining < size) {
+          return this.getCell(currentRow, currentCol + remaining, size);
+        }
+        remaining -= (size - currentCol);
+        currentCol = size - 1;
+        currentRow++;
+      }
+      // Row 1 and Row 3 (top): move right to left
+      else if (currentRow === 1 || currentRow === 3) {
+        if (currentCol - remaining >= 0) {
+          return this.getCell(currentRow, currentCol - remaining, size);
+        }
+        remaining -= (currentCol + 1);
+        currentCol = 0;
+        currentRow++;
+        if (currentRow === 2) currentCol = 0;
+        if (currentRow === 4) currentRow = 2; // From row 3 back to row 2
+      }
+    }
+
+    return this.getCell(currentRow, currentCol, size);
+  }
+
+  getPossibleDestinations(fromCell, steps, size, piece) {
+    const { row, col } = this.getRowCol(fromCell, size);
+    const destinations = [];
+
+    // Normal path
+    const normalDest = this.getNextCell(fromCell, steps, size);
+    if (normalDest !== null) destinations.push(normalDest);
+
+    // Special case: from row 2, can choose to go to row 3 (4th row)
+    if (row === 2 && col + steps >= size && !piece.reachedLastRow) {
+      const stepsToEnd = size - col;
+      const remaining = steps - stepsToEnd;
+      // Go to row 3 instead of row 1
+      const row3Dest = this.getCell(3, size - 1 - remaining, size);
+      if (row3Dest >= 3 * size && row3Dest < 4 * size) {
+        destinations.push(row3Dest);
+      }
+    }
+
+    return destinations;
+  }
+
+  canMoveInLastRow(game, playerColor) {
+    const size = game.size;
+    const firstRowStart = playerColor === 'Blue' ? 0 : 3 * size;
+    const firstRowEnd = playerColor === 'Blue' ? size : 4 * size;
+    
+    // Check if all pieces left first row
+    for (let i = firstRowStart; i < firstRowEnd; i++) {
+      const piece = game.pieces[i];
+      if (piece && piece.color === playerColor && !piece.inMotion) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  isValidMove(game, fromCell, toCell, diceValue) {
+    const piece = game.pieces[fromCell];
+    if (!piece) return { valid: false, error: 'No piece at source' };
+
+    const playerColor = game.currentPlayer === game.initial ? 'Blue' : 'Red';
+    if (piece.color !== playerColor) {
+      return { valid: false, error: 'Not your piece' };
+    }
+
+    // First move must be with Tâb (1)
+    if (!piece.inMotion && diceValue !== 1) {
+      return { valid: false, error: 'First move must be with Tâb (1)' };
+    }
+
+    const { row: fromRow } = this.getRowCol(fromCell, game.size);
+    const { row: toRow } = this.getRowCol(toCell, game.size);
+
+    // Cannot return to first row
+    if (piece.inMotion && toRow === (playerColor === 'Blue' ? 0 : 3)) {
+      return { valid: false, error: 'Cannot return to first row' };
+    }
+
+    // Check if in 4th row and trying to move there
+    if (toRow === 3 && playerColor === 'Blue') {
+      if (piece.reachedLastRow) {
+        return { valid: false, error: 'Piece already visited last row' };
+      }
+      if (!this.canMoveInLastRow(game, playerColor)) {
+        return { valid: false, error: 'Must move all pieces from first row before moving in last row' };
+      }
+    }
+    if (toRow === 0 && playerColor === 'Red') {
+      if (piece.reachedLastRow) {
+        return { valid: false, error: 'Piece already visited last row' };
+      }
+      if (!this.canMoveInLastRow(game, playerColor)) {
+        return { valid: false, error: 'Must move all pieces from first row before moving in last row' };
+      }
+    }
+
+    // Check destination
+    const destPiece = game.pieces[toCell];
+    if (destPiece && destPiece.color === playerColor) {
+      return { valid: false, error: 'cannot capture your own piece' };
+    }
+
+    // Verify the move matches dice value
+    const possibleDests = this.getPossibleDestinations(fromCell, diceValue, game.size, piece);
+    if (!possibleDests.includes(toCell)) {
+      return { valid: false, error: 'Invalid move: must play the dice\'s value' };
+    }
+
+    return { valid: true };
+  }
+
+  getValidMoves(game) {
+    if (!game.dice) return [];
+    
+    const playerColor = game.currentPlayer === game.initial ? 'Blue' : 'Red';
+    const diceValue = game.dice.value;
+    const validMoves = [];
+
+    for (let i = 0; i < game.pieces.length; i++) {
+      const piece = game.pieces[i];
+      if (!piece || piece.color !== playerColor) continue;
+
+      const possibleDests = this.getPossibleDestinations(i, diceValue, game.size, piece);
+      for (const dest of possibleDests) {
+        const validation = this.isValidMove(game, i, dest, diceValue);
+        if (validation.valid) {
+          validMoves.push({ from: i, to: dest });
+        }
+      }
+    }
+
+    return validMoves;
+  }
+
+  checkWinCondition(game) {
+    const bluePieces = game.pieces.filter(p => p && p.color === 'Blue').length;
+    const redPieces = game.pieces.filter(p => p && p.color === 'Red').length;
+
+    if (bluePieces === 0) {
+      return { over: true, winner: game.players.find(p => p !== game.initial) }; // Red wins
+    }
+    if (redPieces === 0) {
+      return { over: true, winner: game.initial }; // Blue wins
+    }
+
+    return { over: false, winner: null };
   }
 
   async leaveGame(gameId, nick) {
@@ -108,9 +322,12 @@ class GameManager {
     game.winner = opponent;
     game.currentPlayer = null; // Game ended
 
+    if (this.rankingManager) {
+      await this.rankingManager.updatePlayerStats(game.group, game.size, opponent, nick);
+    }
+
     // Broadcast winner to both players
     this.broadcast(gameId, { winner: opponent });
-    
     await this.save();
     return { success: true };
   }
@@ -143,14 +360,13 @@ class GameManager {
     game.dice = { stickValues, value, keepPlaying };
     game.lastMoveTime = Date.now();
 
-    // Determine if player must pass
-    // In a real implementation, check if there are valid moves with this dice
-    // For now, we'll send mustPass as null (server doesn't enforce move validity)
+    const validMoves = this.getValidMoves(game);
+    const mustPass = (validMoves.length === 0 && !keepPlaying) ? game.currentPlayer : null;
     
     this.broadcast(gameId, {
       dice: game.dice,
       turn: game.currentPlayer,
-      mustPass: null
+      mustPass: mustPass
     });
 
     await this.save();
@@ -176,11 +392,17 @@ class GameManager {
       return { success: false, error: 'You already rolled the dice but can roll it again' };
     }
 
+    const validMoves = this.getValidMoves(game);
+    if (validMoves.length > 0) {
+      return { success: false, error: 'You already rolled the dice and have valid moves' };
+    }
+
     // Pass turn to opponent
     const opponent = game.players.find(p => p !== nick);
     game.currentPlayer = opponent;
     game.dice = null;
     game.step = 'from';
+    game.selected = [];
     game.lastMoveTime = Date.now();
 
     this.broadcast(gameId, {
@@ -201,128 +423,157 @@ class GameManager {
     const game = this.games.get(gameId);
     
     if (game.currentPlayer !== nick) {
-      return { success: false, error: 'not your turn to play' };
+      return { success: false, error: 'Not your turn to play' };
     }
 
     if (typeof cell !== 'number') {
-      return { success: false, error: 'cell is not an integer' };
+      return { success: false, error: 'Cell is not an integer' };
     }
 
     if (cell < 0) {
-      return { success: false, error: 'cell is negative' };
+      return { success: false, error: 'Cell is negative' };
     }
 
     if (cell >= 4 * game.size) {
-      return { success: false, error: 'cell out of bounds' };
+      return { success: false, error: 'Cell out of bounds' };
     }
 
     // Handle move logic based on step
     const opponent = game.players.find(p => p !== nick);
+    const playerColor = nick === game.initial ? 'Blue' : 'Red';
     
     if (game.step === 'from') {
-      // Player selecting a piece to move
-      // Check if there's a piece at this position owned by current player
+
+      if (!game.dice) {
+        return { success: false, error: 'You must roll the dice first' };
+      }
+
       const piece = game.pieces[cell];
-      
-      if (!piece || piece.color !== (nick === game.initial ? 'Blue' : 'Red')) {
+      if (!piece || piece.color !== playerColor) {
         return { success: false, error: 'Invalid piece selection' };
       }
 
-      // Move to 'to' step
+      const validDests = this.getPossibleDestinations(cell, game.dice.value, game.size, piece)
+        .filter(dest => {
+          const validation = this.isValidMove(game, cell, dest, game.dice.value);
+          return validation.valid;
+        });
+
+      if (validDests.length === 0) {
+        return { success: false, error: 'No valid moves for selected piece' };
+      }
+
       game.step = 'to';
-      game.selected = [cell]; // Remember selected piece
+      game.selected = [cell];
+
+      this.broadcast(gameId, {
+        cell,
+        selected: [cell, ...validDests],
+        step: game.step,
+        turn: game.currentPlayer
+      });
+
+      await this.save();
+      return { success: true };
       
     } else if (game.step === 'to') {
       // Player selecting destination
-      // In Phase 2, if same as 'from', it cancels selection
       if (game.selected && game.selected[0] === cell) {
         // Rollback
         game.step = 'from';
         game.selected = [];
         this.broadcast(gameId, {
           step: 'from',
-          selected: game.selected,
           turn: game.currentPlayer
         });
         await this.save();
         return { success: true };
       }
 
-      // Move piece
-      const sourcePiece = game.pieces[game.selected[0]];
+      if (!game.selected || game.selected.length === 0) {
+        return { success: false, error: 'No piece selected' };
+      }
+
+      const fromCell = game.selected[0];
+      const validation = this.isValidMove(game, fromCell, cell, game.dice.value);
+
+      if (!validation.valid) {
+        return { success: false, error: validation.error };
+      }
+
+      const sourcePiece = game.pieces[fromCell];
       const destPiece = game.pieces[cell];
 
       // Check for capture
-      if (destPiece && destPiece.color === (nick === game.initial ? 'Red' : 'Blue')) {
-        return { success: false, error: 'cannot capture to your own piece' };
+      if (destPiece && destPiece.color !== playerColor) {
+        game.pieces[cell] = null;
       }
 
       // Perform move
       game.pieces[cell] = sourcePiece;
-      game.pieces[game.selected[0]] = null;
+      game.pieces[fromCell] = null;
 
       // Update piece state
-      if (sourcePiece) {
-        sourcePiece.inMotion = true;
-        // Check if reached last row
-        const lastRow = nick === game.initial ? 3 * game.size : game.size - 1;
-        if (cell >= lastRow && cell < lastRow + game.size) {
-          sourcePiece.reachedLastRow = true;
-        }
+      sourcePiece.inMotion = true;
+      const { row: toRow } = this.getRowCol(cell, game.size);
+      if ((toRow === 3 && playerColor === 'Blue') || (toRow === 0 && playerColor === 'Red')) {
+        sourcePiece.reachedLastRow = true;
       }
 
-      // Pass turn to opponent (normal flow)
-      game.currentPlayer = opponent;
-      game.dice = null;
-      game.step = 'from';
-      game.selected = [];
       game.lastMoveTime = Date.now();
 
-      // Check for game over (all pieces moved to last row)
-      const allMovedBlue = game.pieces
-        .slice(0, game.size)
-        .every(p => !p || p.inMotion);
-      const allMovedRed = game.pieces
-        .slice(3 * game.size)
-        .every(p => !p || p.inMotion);
+      const winCheck = this.checkWinCondition(game);
+      if (winCheck.over) {
+        game.winner = winCheck.winner;
+        game.currentPlayer = null;
 
-      if (allMovedBlue) {
-        game.winner = game.initial;
+        if (this.rankingManager) {
+          const loser = game.players.find(p => p !== winCheck.winner);
+          await this.rankingManager.updatePlayerStats(game.group, game.size, winCheck.winner, loser);
+        }
+
         this.broadcast(gameId, {
-          winner: game.initial,
+          winner: winCheck.winner,
           pieces: game.pieces,
-          cell: cell,
-          selected: [game.selected[0], cell]
         });
         await this.save();
         return { success: true };
       }
 
-      if (allMovedRed) {
-        const redPlayer = game.players.find(p => p !== game.initial);
-        game.winner = redPlayer;
+      if (game.dice.keepPlaying) {
+        game.dice = null;
+        game.step = 'from';
+        game.selected = [];
+
         this.broadcast(gameId, {
-          winner: redPlayer,
-          pieces: game.pieces,
           cell: cell,
-          selected: [game.selected[0], cell]
+          selected: [fromCell, cell],
+          pieces: game.pieces,
+          turn: game.currentPlayer,
+          step: 'from',
+          dice: null,
+          initial: game.initial
         });
-        await this.save();
-        return { success: true };
+      } else {
+        game.currentPlayer = opponent;
+        game.dice = null;
+        game.step = 'from';
+        game.selected = [];
+
+        this.broadcast(gameId, {
+          cell: cell,
+          selected: [fromCell, cell],
+          pieces: game.pieces,
+          turn: game.currentPlayer,
+          step: 'from',
+          initial: game.initial
+        });
       }
 
-      this.broadcast(gameId, {
-        cell: game.selected[0],
-        selected: [game.selected[0], cell],
-        pieces: game.pieces,
-        turn: game.currentPlayer,
-        step: 'from',
-        initial: game.initial
-      });
+      await this.save();
+      return { success: true };
     }
-
-    await this.save();
-    return { success: true };
+    return { success: false, error: 'Invalid game state' };
   }
 
   async setupSSE(query, res) {
@@ -335,7 +586,10 @@ class GameManager {
       return;
     }
 
-    if (!this.games.has(gameId)) {
+    const gameExists = this.game.has(gameId);
+    const isWaiting = Array.from(this.waitingPlayers.values()).some(w => w.gameId === gameId);
+
+    if (!gameExists && !isWaiting) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Invalid game reference' }));
       return;
@@ -353,8 +607,23 @@ class GameManager {
     }
     this.sseListeners.get(gameId).set(nick, res);
 
-    // Send initial empty message
-    res.write('data: {}\n\n');
+    if (gameExists) {
+      const game = this.games.get(gameId);
+      const snapshot = {
+        pieces: game.pieces,
+        initial: game.initial,
+        step: game.step,
+        turn: game.currentPlayer,
+        players: {
+          [game.players[0]]: 'Blue',
+          [game.players[1]]: 'Red'
+        },
+        dice: game.dice || null
+      };
+      res.write(`data: ${JSON.stringify(snapshot)}\n\n`);
+    } else {
+      res.write(`data: {"waiting": true}\n\n`);
+    }
 
     res.on('close', () => {
       const listeners = this.sseListeners.get(gameId);
@@ -387,6 +656,15 @@ class GameManager {
         listeners.delete(nick);
       }
     });
+
+    if (data.winner) {
+      listeners.forEach((res, nick) => {
+        try {
+          res.end();
+        } catch (e) { }
+      });
+      this.sseListeners.delete(gameId);
+    }
   }
 
   async save() {
@@ -395,6 +673,13 @@ class GameManager {
       await fs.writeFile(this.gamesFile, JSON.stringify(gamesArray, null, 2));
     } catch (e) {
       console.error('Error saving games:', e);
+    }
+  }
+
+  stop() {
+    if (this.timeoutTimer) {
+      clearInterval(this.timeoutTimer);
+      this.timeoutTimer = null;
     }
   }
 }

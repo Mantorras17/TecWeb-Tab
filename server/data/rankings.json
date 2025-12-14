@@ -1,1 +1,36 @@
-[]
+[
+  [
+    "99-9",
+    [
+      {
+        "nick": "player2",
+        "games": 1,
+        "victories": 1
+      },
+      {
+        "nick": "player1",
+        "games": 1,
+        "victories": 0
+      }
+    ]
+  ],
+  [
+    "10-9",
+    [
+      {
+        "nick": "hugo",
+        "games": 6,
+        "victories": 5
+      },
+      {
+        "nick": "hugoo",
+        "games": 7,
+        "victories": 1
+      },
+      {
+        "games": 1,
+        "victories": 1
+      }
+    ]
+  ]
+]

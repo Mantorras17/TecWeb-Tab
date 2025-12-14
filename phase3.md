@@ -16,9 +16,9 @@ The responses of those functions must also follow the specifications of the sect
 
 The server must produce state response lines appropriate, like:
   - 200: successful request
-	- 400: requests error (ex:. argument validation)
-	- 401: non-authorized request (invalid pair nick/password)
-	- 404: unknown request
+  - 400: requests error (ex:. argument validation)
+  - 401: non-authorized request (invalid pair nick/password)
+  - 404: unknown request
 
 
 <h2>Structure</h2>

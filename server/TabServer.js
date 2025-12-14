@@ -10,7 +10,7 @@ class TabServer {
     this.port = port;
     this.userManager = new UserManager();
     this.rankingManager = new RankingManager();
-    this.gameManager = new GameManager();
+    this.gameManager = new GameManager(this.rankingManager);
     this.validator = new RequestValidator();
     
     this.server = http.createServer((req, res) => this.handleRequest(req, res));
@@ -262,6 +262,9 @@ class TabServer {
 
   stop() {
     this.server.close();
+    if (this.gameManager && this.gameManager.stop) {
+      this.gameManager.stop();
+    }
   }
 }
 

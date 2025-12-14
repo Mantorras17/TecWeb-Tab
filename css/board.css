@@ -1,0 +1,113 @@
+/* Board container and cells */
+.board-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 8vh auto 4vh !important;
+  padding: 40px 60px;
+  background: #351a1a;
+  border: none;
+  border-radius: 40px / 60px;
+  box-shadow:
+    0 0 0 3px #444 inset,
+    0 8px 20px rgba(0, 0, 0, 0.25);
+  
+  /* MOVED HERE: Smooth rotation in BOTH directions */
+  transition: transform 0.8s ease-in-out;
+  
+  display: inline-flex;
+  width: max-content;
+}
+
+.board-container {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+}
+
+/* ONLY transform, no transition here */
+.board-box.rotated { 
+  transform: rotate(180deg); 
+}
+
+#board { max-width: none !important; width: max-content; margin: 10px auto; }
+
+@media (min-height: 700px) { 
+  .board-box { margin-top: 100px !important; margin-bottom: 8vh; } 
+}
+
+.board-row { display: inline-flex; gap: var(--gap, 8px); }
+
+.board-cell {
+  width: var(--cell, 60px); height: var(--cell, 60px);
+  background: #4c3629; border: 1px solid #a88c6c; border-radius:5%;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  box-shadow: inset 0 2px 4px rgba(255,255,255,0.4), inset 0 -2px 4px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.15);
+}
+
+/* Flow arrows overlay on cells – Unicode arrows */
+.board-cell.flow { position: relative; }
+.board-cell.flow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #f3e5c8;
+  opacity: 0.4;
+  pointer-events: none;
+  z-index: 0;
+  font-weight: bold;
+}
+
+.board-cell.flow-right::after { content: "→"; }
+.board-cell.flow-left::after { content: "←"; }
+.board-cell.flow-diag-45::after { content: "↗"; }
+.board-cell.flow-diag-135::after { content: "↖"; }
+.board-cell.flow-diag-225::after { content: "↙"; }
+.board-cell.flow-diag-315::after { content: "↘"; }
+
+/* Special corner with two arrows */
+.board-cell.flow-diag-right-both::after {
+  content: "↗";
+  inset: -5% 0 50% 0;
+  font-size: 20px;
+}
+.board-cell.flow-diag-right-both::before {
+  content: "↘";
+  position: absolute;
+  inset: 50% 0 -5% 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #f3e5c8;
+  opacity: 0.4;
+  pointer-events: none;
+  z-index: 0;
+  font-weight: bold;
+}
+
+.row-sep { height: 2px; background: #fff4f4; margin: 4px 0; width: 100%; }
+
+/* Highlighted destination */
+.board-cell.highlight {
+  box-shadow: 0 0 12px 4px #ffd54f, inset 0 2px 4px rgba(255,255,255,0.4), inset 0 -2px 4px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.15);
+  cursor: grab;
+}
+.board-cell.highlight:active { cursor: grabbing; }
+
+@media (max-width: 600px) { .board-cell, .piece { min-width: 20px; min-height: 20px; } }
+
+
+#pass-turn-container {
+  margin-top: 0px;       /* space below board */
+}
+
+#pass-turn {
+  min-width: 180px;       /* a bit wider, optional */
+}

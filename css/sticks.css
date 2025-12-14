@@ -1,0 +1,103 @@
+/* Sticks area placement and group */
+
+#sticks-area {
+  grid-area: sticks-area;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 8px 0 0 0;
+  min-width: 0;
+  margin: 0;
+}
+
+#dice-of-sticks {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  transform: translateY(var(--sticks-nudge, 0px));
+}
+
+#sticks-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.stick-strip {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  perspective: 1000px;
+}
+
+.stick-chip,
+.stick-img {
+  width: 60px;
+  height: 390px;
+  border-radius: 18px;
+  border: 2px solid #351a1a;
+  box-shadow:
+    inset 0 1px 4px rgba(255, 255, 255, 0.3),
+    0 2px 6px rgba(0, 0, 0, 0.25);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  will-change: transform;
+}
+
+.stick-img.light {
+  filter: brightness(0.95) contrast(1.1) saturate(1.1) hue-rotate(0deg);
+}
+
+.stick-img.dark {
+  filter: brightness(1.15) contrast(1.05) sepia(0.15) saturate(0.8);
+}
+
+.stick--dark {
+  background: #3b2b22;
+}
+
+.stick--light {
+  background: #f4e2be;
+}
+
+.sticks-label {
+  margin-top: 6px;
+  font-weight: 700;
+  color: #3b2b22;
+  font-size: 1.1rem;
+}
+
+.stick-img.inactive,
+.stick-chip.inactive {
+  filter: brightness(0) invert(0.85) !important;
+  mix-blend-mode: normal !important;
+  opacity: 1 !important;
+}
+
+.stick-img.active,
+.stick-chip.active {
+  filter: none;
+  opacity: 1;
+  transition: filter 0.3s ease, opacity 0.3s ease;
+}
+
+@keyframes stickFlip {
+  0% {
+    transform: rotateX(0deg) scale(1);
+  }
+  50% {
+    transform: rotateX(180deg) scale(1.05);
+  }
+  100% {
+    transform: rotateX(360deg) scale(1);
+  }
+}
+
+#throw-sticks:disabled,
+#throw-sticks[aria-disabled="true"] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}

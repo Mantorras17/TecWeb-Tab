@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Tâb Game</title>
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/sidepanel.css">
+    <link rel="stylesheet" href="css/controls.css">
+    <link rel="stylesheet" href="css/board.css">
+    <link rel="stylesheet" href="css/pieces.css">
+    <link rel="stylesheet" href="css/sticks.css">
+    <link rel="stylesheet" href="css/instructions.css">
+    <link rel="stylesheet" href="css/scoreboard.css">
+    <link rel="stylesheet" href="css/intro.css">
+    <link rel="stylesheet" href="css/usermenu.css">
+    <link rel="stylesheet" href="css/modal.css">
+    <link rel="stylesheet" href="css/utilities.css">
+    <link href="https://fonts.googleapis.com/css2?family=Devonshire&display=swap" rel="stylesheet">
+    <link rel="icon" href="img/background.jpg" type="image/jpeg" sizes="32x32">
+</head>
+
+<body>
+    <!-- Intro / Landing Screen -->
+    <div id="intro-screen" role="dialog" aria-modal="true">
+        <div class="intro-card">
+            <div class="intro-logo">TÂB</div>
+            <button id="intro-start" class="intro-start-btn" aria-label="Start Tâb">Start</button>
+        </div>
+    </div>
+    <!-- Mode Selection Screen -->
+    <div id="mode-screen" hidden>
+        <div class="mode-card">
+            <div class="mode-logo">Choose Game Mode</div>
+            <div class="mode-buttons">
+                <button class="mode-btn" id="mode-single">Single Player</button>
+                <button class="mode-btn" id="mode-multi">Multiplayer (Local)</button>
+                <button class="mode-btn" id="mode-cpu">Player vs CPU</button>
+                <button class="mode-btn" id="mode-back">← Back</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- App  -->
+    <button type="button" id="menu-btn" aria-label="Open menu">&#9776;</button>
+    <div id="main-grid">
+        <div id="sidePanel-scrim"></div>
+        <aside id="sidePanel" tabindex="-1">
+            <div id="sidePanel-content">
+                <button id="closePanel" aria-label="Close menu">&times;</button>
+                <div id="configurations-logo">Configurations</div>
+                <div id="sidePanel-configs">
+                    <div id="configurations">
+                        <label for="game-mode">Game Mode:</label>
+                        <select id="game-mode">
+                            <option value="pvc">Player vs. Computer</option>
+                            <option value="pvp">Player vs. Player</option>
+                            <option value="online">Online Multiplayer</option>
+                        </select>
+                        <label for="board-size">Board Size:</label>
+                        <select id="board-size">
+                            <option value="7">7</option>
+                            <option value="9" selected>9</option>
+                            <option value="11">11</option>
+                            <option value="13">13</option>
+                            <option value="15">15</option>
+                        </select>
+                        <label for="first-player">First Player:</label>
+                        <select id="first-player">
+                            <option value="player">Player</option>
+                            <option value="cpu">CPU</option>
+                        </select>
+                        <label for="difficulty">Difficulty:</label>
+                        <select id="difficulty">
+                            <option value="easy">Easy</option>
+                            <option value="medium">Medium</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </div>
+                    <div id="controls">
+                        <button id="start-game">Start</button>
+                        <button id="quit-game">Quit</button>
+                        <button id="show-instructions">Instructions</button>
+                    </div>
+                    
+                </div>
+            </div>
+        </aside>
+        <header id="header">
+            <div id="logo-wrapper">
+                <div id="logo">TÂB</div>
+                </div>
+            </header>
+        <div id="login-area">
+            <div id="identification">
+                <div id="user-avatar">
+                    <img src="https://cdn-icons-png.flaticon.com/512/847/847969.png" alt="User Icon">
+                    <span id="user-id">Guest</span>
+                </div>
+
+                <div id="user-menu" class="hidden">
+                    <div class="menu-screen" id="menu-main">
+                        <button class="user-btn" id="btn-login">Login</button>
+                        <button class="user-btn" id="btn-signup">Sign Up</button>
+                    </div>
+
+                    <div class="menu-screen hidden" id="menu-login">
+                        <h3>Login</h3>
+                        <input type="text" placeholder="Username" id="login-user">
+                        <input type="password" placeholder="Password" id="login-pass">
+                        <div class="menu-actions">
+                            <button class="user-btn confirm">Enter</button>
+                            <button class="user-btn back-btn">← Back</button>
+                        </div>
+                    </div>
+
+                    <div class="menu-screen hidden" id="menu-signup">
+                        <h3>Sign Up</h3>
+                        <input type="text" placeholder="New Username" id="signup-user">
+                        <input type="password" placeholder="Password" id="signup-pass">
+                        <div class="menu-actions">
+                            <button class="user-btn confirm">Create</button>
+                            <button class="user-btn back-btn">← Back</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="messages">
+            <div class="msg-box">
+              <button id="open-sidepanel" class="intro-start-btn">Open Menu</button>
+            </div>
+          </div>          
+        <main id="main-content">
+            <div id="board"></div>
+            <div id="pass-turn-container">
+                <button id="pass-turn" class="btn-primary">Pass Turn</button>
+            </div>
+        </main>
+        <aside id="sticks-area">
+            <div id="dice-of-sticks">
+                <button id="throw-sticks" class="btn-primary">Throw Sticks</button>
+                <canvas id="sticks-canvas" width="320" height="450" aria-label="Sticks Result">
+                    Your browser does not support HTML5 Canvas.
+                </canvas>
+            </div>
+        </aside>
+        <div id="instructions-scrim" class="hidden" aria-hidden="true"></div>
+
+        <!-- Glass Instructions modal -->
+        <div id="instructions" role="dialog" aria-modal="true" aria-labelledby="ins-title" aria-hidden="true">
+        <div class="ins-header">
+            <h2 id="ins-title" class="ins-title">Instructions</h2>
+            <button type="button" class="btn-ghost ins-close">Close</button>
+        </div>
+
+        <div class="ins-body" id="instructions-content" role="group" aria-label="Instructions pages">
+            <div class="ins-pages" id="ins-pages">
+            <!-- Page 1 -->
+            <section class="ins-page" data-page="1" aria-labelledby="ins-h1">
+                <div class="ins-layout">
+                <!-- Left: text -->
+                <div class="ins-text">
+                    <h3 id="ins-h1">Objective</h3>
+                    <p>Capture all opponent pieces. Moves are determined by throwing the four sticks.</p>
+            
+                    <p>Each stick has two sides: <b>bright side</b> and <b>dark side</b>.</p>            
+                    <p>After throwing, count how many bright sides are facing up.
+                    That number is your <b>move value</b> (1–4, or 6 if all are dark).</p>
+            
+                    <ul>
+                    <li>1, 4, or 6 → <b>Play again</b> after your move.</li>
+                    <li>2 or 3 → Move, then pass turn to your opponent.</li>
+                    </ul>
+                </div>
+            
+                <!-- Right: sticks (matches game visuals) -->
+                <aside class="ins-illustration" aria-label="Stick sides examples">
+                    <div class="stick-strip">
+                    <!-- Use the SAME image asset and classes you use in-game -->
+                    <!-- Example layout: two bright + two dark; swap as you like -->
+                    <img class="stick-img light active" src="img/lightstick.jpg" alt="Bright flat side">
+                    <img class="stick-img dark active"  src="img/darkstick.jpg" alt="Dark rounded side">
+                    <img class="stick-img light active" src="img/lightstick.jpg" alt="Bright flat side">
+                    <img class="stick-img dark active"  src="img/darkstick.jpg" alt="Dark rounded side">
+                    </div>
+                    <div class="sticks-label" >Example: 2 bright → value 2</div>
+                </aside>
+                </div>
+            </section>
+            <!-- Page 2 -->
+            <section class="ins-page" data-page="2" aria-labelledby="ins-h2">
+                <div class="ins-layout">
+                <!-- Left: text -->
+                <div class="ins-text">
+                    <h3 id="ins-h2">Your Turn</h3>
+                    <ol>
+                    <li>Press <b>Throw Sticks</b>.</li>
+                    <li>Select one of your pieces with highlights.</li>
+                    <li>Click a highlighted destination to move.</li>
+                    </ol>
+                    <p>First move for each piece requires a <b>Tâb (1)</b>.</p>
+                </div>
+            
+                <!-- Right: illustration -->
+                <aside class="ins-illustration">
+                    <img
+                    src="img/movepiece.jpg"
+                    alt="Example showing a player selecting a highlighted piece and destination"
+                    class="ins-img"
+                    >
+                </aside>
+                </div>
+            </section>
+            <!-- Page 3 -->
+            <section class="ins-page" data-page="3" aria-labelledby="ins-h3">
+                <div class="ins-layout">
+                <!-- Left: text -->
+                <div class="ins-text">
+                    <h3 id="ins-h3">Captures & Rows</h3>
+                    <ul>
+                    <li>Landing on an opponent's piece captures it.</li>
+                    <li>You can't re-enter your own start row.</li>
+                    <li>The last row becomes available only after all your pieces have left the start row.</li>
+                    </ul>
+                </div>
+            
+                <!-- Right: illustration -->
+                <aside class="ins-illustration">
+                    <img
+                    src="img/capture.jpg"
+                    alt="Example of capturing an opponent and reaching the last row"
+                    class="ins-img"
+                    >
+                </aside>
+                </div>
+            </section>
+            
+            </div>
+          </div>
+          
+          <div class="ins-footer">
+            <div class="ins-nav">
+              <button type="button" id="ins-prev" class="btn-ghost" aria-label="Previous page">← Prev</button>
+              <span id="ins-counter" class="ins-counter">Page 1 of 3</span>
+              <button type="button" id="ins-next" class="btn-primary" aria-label="Next page">Next →</button>
+            </div>
+          </div>
+          
+          
+          
+        </div>
+    </div>
+    <div id="scoreboard-panel">
+        <div class="scoreboard-container">
+            <h2 id="scoreboard-title">Offline ScoreBoard</h2>
+
+            <div id="leaderboard-content">
+                <div class="leaderboard-panel" id="leaderboard-local">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Name</th>
+                                <th>Wins</th>
+                                <th>Losses</th>
+                                <th>Win/Loss Ratio</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scoreboard-body">
+                        </tbody>
+                    </table>
+                </br>                    
+                <h2 id="scoreboard-title">Online ScoreBoard</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+    <button type="button" id="scoreboard-btn" aria-label="Open scoreboard">🏆</button>
+    <div id="modal-overlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-box">
+            <h3 id="modal-title">Confirm</h3>
+            <p id="modal-text">Are you sure?</p>
+            <div id="modal-buttons">
+                <button id="modal-cancel" class="modal-btn">Cancel</button>
+                <button id="modal-confirm" class="modal-btn confirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+    
+</body>
+</html>

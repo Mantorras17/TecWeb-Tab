@@ -1,0 +1,75 @@
+/* Modal confirmation overlay and box */
+
+#modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(5px);
+  display: grid;
+  place-items: center;
+  z-index: 2000;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+#modal-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.modal-box {
+  background: #fdfaf5;
+  border-radius: 12px;
+  padding: 24px 30px;
+  width: min(450px, 90vw);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.63);
+  text-align: center;
+  color: #3b2b22;
+}
+
+#modal-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+#modal-text {
+  font-size: 1rem;
+  line-height: 1.5;
+  margin-bottom: 25px;
+}
+
+#modal-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.modal-btn {
+  font-size: 1rem;
+  padding: 10px 20px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+  font-weight: 600;
+  background: #aaa;
+  color: #fff;
+}
+
+.modal-btn:hover {
+  background: #999;
+  transform: translateY(-1px);
+}
+
+.modal-btn.confirm {
+  background: #4c3629;
+  color: #fff;
+}
+
+.modal-btn.confirm:hover {
+  background: #3a2a1f;
+  transform: translateY(-1px);
+}

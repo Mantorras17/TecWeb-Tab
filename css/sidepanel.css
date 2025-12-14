@@ -1,0 +1,213 @@
+/* Side panel (glass) and its content */
+#sidePanel {
+  grid-area: sidePanel;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 0px;
+  max-width: 90vw;
+  background: linear-gradient(
+    to bottom,
+    rgba(245, 235, 225, 0.55),
+    rgba(245, 235, 225, 0.35)
+  );
+  border-right: 1px solid rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(12px) saturate(1.05);
+  box-shadow:
+    6px 0 24px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  overflow: hidden;
+  color: #2a2019;
+  padding: 20px 0 0 0;
+  z-index: 400;
+  pointer-events: all; /* changed from 'auto' */
+  transition: width 0.3s ease;
+}
+
+#sidePanel-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px 20px 40px 20px;
+  width: 100%;
+  overflow-y: auto;
+}
+
+#closePanel {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: rgba(76, 54, 41, 0.9);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 1.8rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  z-index: 650;
+}
+
+#closePanel:hover {
+  background: #3a2a20;
+  transform: scale(1.05);
+}
+
+#closePanel:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* When close action is logically blocked, indicate visually but allow clicks */
+#closePanel.close-blocked {
+  opacity: 0.75;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.18) inset;
+}
+
+#configurations-logo {
+  font-size: 2em;
+  font-weight: 600;
+  text-align: left;
+  margin: 30px 0 5px 35px;
+  color: #3b2b22;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+#configurations {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 15px;
+  padding-left: 15px;
+  padding-right: 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+#configurations > label {
+  display: block;
+  font-weight: 600;
+  font-size: 1.2rem;
+  color: #3b2b22;
+  margin: 30px 0px 5px 30px;
+}
+
+#configurations > label:first-of-type {
+  margin-top: 0;
+}
+
+#configurations > select {
+  width: 100%;
+  max-width: 200px;
+  height: 42px;
+  padding: 8px 12px;
+  font-size: 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(60, 40, 30, 0.45);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(4px);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.35);
+  margin: 0 0 6px 40px;
+}
+
+#configurations > select:focus {
+  outline: none;
+  border-color: #a37a5a;
+  box-shadow: 0 0 0 3px rgba(163, 122, 90, 0.25);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  #sidePanel {
+    background: rgba(245, 235, 225, 0.95);
+    backdrop-filter: none;
+  }
+}
+
+#sidePanel-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: 350;
+}
+
+#sidePanel-scrim.visible {
+  opacity: 1;
+  pointer-events: all; /* changed from 'auto' */
+}
+
+#sidePanel {
+  position: fixed;
+  z-index: 600;
+}
+
+#sidePanel-scrim {
+  position: fixed;
+  z-index: 550;
+}
+
+#menu-btn {
+  position: fixed;
+  z-index: 650;
+}
+
+/* Full menu button styling */
+#menu-btn {
+  top: 16px;
+  left: 16px;
+  background: #4c3629;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  width: 44px;
+  height: 44px;
+  font-size: 2em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+#menu-btn:hover,
+#menu-btn:focus {
+  background: #444;
+  outline: none;
+}
+
+#sidePanel:not(.open) {
+  pointer-events: none;
+}
+
+#sidePanel.open {
+  pointer-events: all; /* changed from 'auto' */
+}
+
+@media (max-width: 600px) {
+  #sidePanel {
+    position: fixed;
+    width: 0;
+    max-width: 100vw;
+    height: 100vh;
+    z-index: 300;
+  }
+  
+  #sidePanel:focus-within {
+    width: 90vw;
+  }
+  
+  #menu-btn {
+    width: 38px;
+    height: 38px;
+    font-size: 1.5em;
+    top: 8px;
+    left: 8px;
+  }
+}

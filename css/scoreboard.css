@@ -19,7 +19,8 @@
   bottom: 0;
 }
 
-#scoreboard-title {
+#scoreboard-title-online, 
+#scoreboard-title-offline {
   margin: 0 0 10px;
   text-align: center;
   font-size: 1.4rem;

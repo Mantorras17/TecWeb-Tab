@@ -142,6 +142,7 @@ export default class ServerManager {
     clearGame() {
         this.state.active = false;
         this.state.gameId = null;
+        this.stopListening();
         this.closeUpdate();
     }
 }

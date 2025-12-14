@@ -16,7 +16,7 @@ export default class UIManager {
       introStartBtn: document.getElementById('intro-start'),
       boardEl: document.getElementById('board'),
       rollBtn: document.getElementById('throw-sticks'),
-      sticksEl: document.getElementById('sticks-result'),
+      sticksEl: document.getElementById('sticks-canvas'),
       startSideBtn: document.getElementById('start-game'),
       quitBtn: document.getElementById('quit-game'),
       msgEl: document.getElementById('messages'),
@@ -46,6 +46,7 @@ export default class UIManager {
       insNext: document.getElementById('ins-next'),
       userAvatar: document.getElementById('user-avatar'),
       userMenu: document.getElementById('user-menu'),
+      userIdSpan: document.getElementById('user-id'),
       menuMain: document.getElementById('menu-main'),
       menuLogin: document.getElementById('menu-login'),
       menuSignup: document.getElementById('menu-signup'),
@@ -395,11 +396,12 @@ export default class UIManager {
   }
 
   clearGameUI() {
-    const { boardEl, sticksEl, rollBtn } = this.elements;
+    const { boardEl, sticksEl, rollBtn, passTurnBtn } = this.elements;
     if (boardEl) boardEl.innerHTML = '';
     if (sticksEl) sticksEl.innerHTML = '';
     this.hide(rollBtn);
     this.hide(sticksEl);
+    this.hide(passTurnBtn);
   }
 
   getElements() {

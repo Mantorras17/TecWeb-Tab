@@ -334,7 +334,7 @@ export default class TabGame {
     else {
       if (isCpu) this.endTurn(false);
       else {
-        this.stickvalue = null;
+        this.stickValue = null;
         this.waitingForPass = true;
       }
     }

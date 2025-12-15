@@ -1041,5 +1041,621 @@
       "createdAt": "2025-12-14T13:14:38.371Z",
       "lastMoveTime": 1765718078371
     }
+  ],
+  [
+    "5cc91c087bd30a69b021031f0e98d4e2",
+    {
+      "id": "5cc91c087bd30a69b021031f0e98d4e2",
+      "group": 10,
+      "size": 7,
+      "players": [
+        "mariaa",
+        "hugoo"
+      ],
+      "initial": "mariaa",
+      "currentPlayer": null,
+      "step": "from",
+      "pieces": [
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        }
+      ],
+      "dice": null,
+      "winner": "hugoo",
+      "createdAt": "2025-12-14T20:13:57.387Z",
+      "lastMoveTime": 1765743237387
+    }
+  ],
+  [
+    "335e1c089b17c7a2aadf4af152ad057a",
+    {
+      "id": "335e1c089b17c7a2aadf4af152ad057a",
+      "group": 10,
+      "size": 7,
+      "players": [
+        "mariaa",
+        "hugoo"
+      ],
+      "initial": "mariaa",
+      "currentPlayer": null,
+      "step": "from",
+      "pieces": [
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        }
+      ],
+      "dice": {
+        "stickValues": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "value": 4,
+        "keepPlaying": true
+      },
+      "winner": "hugoo",
+      "createdAt": "2025-12-14T20:23:55.914Z",
+      "lastMoveTime": 1765743837924
+    }
+  ],
+  [
+    "adabb6a0e4b4dd6c8c80fd32912ad6fb",
+    {
+      "id": "adabb6a0e4b4dd6c8c80fd32912ad6fb",
+      "group": 10,
+      "size": 9,
+      "players": [
+        "hugoo",
+        "mariaa"
+      ],
+      "initial": "hugoo",
+      "currentPlayer": null,
+      "step": "to",
+      "pieces": [
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        }
+      ],
+      "dice": {
+        "stickValues": [
+          false,
+          true,
+          false,
+          false
+        ],
+        "value": 1,
+        "keepPlaying": true
+      },
+      "winner": "mariaa",
+      "createdAt": "2025-12-14T20:32:29.694Z",
+      "lastMoveTime": 1765744391913,
+      "selected": [
+        8
+      ]
+    }
+  ],
+  [
+    "8b2dd2dbf2790e06a2fe044fea6864fe",
+    {
+      "id": "8b2dd2dbf2790e06a2fe044fea6864fe",
+      "group": 10,
+      "size": 9,
+      "players": [
+        "hugoo",
+        "mariaa"
+      ],
+      "initial": "hugoo",
+      "currentPlayer": null,
+      "step": "from",
+      "pieces": [
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        }
+      ],
+      "dice": {
+        "stickValues": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "value": 4,
+        "keepPlaying": true
+      },
+      "winner": "hugoo",
+      "createdAt": "2025-12-14T20:47:38.450Z",
+      "lastMoveTime": 1765745368604,
+      "selected": []
+    }
+  ],
+  [
+    "c45ed1467a232ab5970db93ad2a564a6",
+    {
+      "id": "c45ed1467a232ab5970db93ad2a564a6",
+      "group": 10,
+      "size": 7,
+      "players": [
+        "maria",
+        "hugo"
+      ],
+      "initial": "maria",
+      "currentPlayer": null,
+      "step": "to",
+      "pieces": [
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Blue",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        },
+        {
+          "color": "Red",
+          "inMotion": false,
+          "reachedLastRow": false
+        }
+      ],
+      "dice": {
+        "stickValues": [
+          true,
+          false,
+          false,
+          false
+        ],
+        "value": 1,
+        "keepPlaying": true
+      },
+      "winner": "hugo",
+      "createdAt": "2025-12-14T21:34:11.691Z",
+      "lastMoveTime": 1765748084267,
+      "selected": [
+        6
+      ]
+    }
   ]
 ]

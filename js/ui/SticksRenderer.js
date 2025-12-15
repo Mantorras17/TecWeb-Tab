@@ -159,8 +159,8 @@ export default class SticksRenderer {
     }
 
     const value = typeof valueOrResult === 'number' ? valueOrResult : valueOrResult.value;
-    const finalSticks = (typeof valueOrResult === 'object' && valueOrResult.sticks)
-      ? valueOrResult.sticks
+    const finalSticks = (typeof valueOrResult === 'object' && (valueOrResult.sticks || valueOrResult.stickValues))
+      ? (valueOrResult.sticks || valueOrResult.stickValues).map(v => v ? 1 : 0)
       : (window.game?.lastSticks?.length ? window.game.lastSticks : [0, 0, 0, 0]);
 
     const labelText = (value === 1) ? `${value} move` : `${value} moves`;

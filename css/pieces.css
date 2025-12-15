@@ -40,7 +40,3 @@
   position: relative;
   z-index: 1;
 }
-
-#board.disabled-board {
-  pointer-events: none;
-}

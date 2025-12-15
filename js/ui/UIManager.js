@@ -209,7 +209,7 @@ export default class UIManager {
         cell.classList.add('flow', flowClass);
         if (r === 0 && c === 0) cell.classList.add('flow-diag-225');
         if (r === 1 && c === game.columns - 1) cell.classList.add('flow-diag-right-both');
-        if (r === 2 && c === 0) cell.classList.add('flow-diag-135');
+        if (r === 2 && c === 0) cell.classList.add('flow-diag-left-both');
         if (r === 3 && c === game.columns - 1) cell.classList.add('flow-diag-45');
 
         const p1 = game.players[0];

@@ -1,12 +1,12 @@
-const TabServer = require('./TabServer');
+const TabServer = require('./modules/TabServer');
 
 const PORT = process.env.PORT || 8110;
-const server = new TabServer(PORT);
+const app = new TabServer(PORT);
 
-server.start();
+app.start();
 
 process.on('SIGINT', () => {
   console.log('\nThanks for playing! Goodbye for now...');
-  server.stop();
+  app.stop();
   process.exit(0);
 });

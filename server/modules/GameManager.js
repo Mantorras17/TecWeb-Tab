@@ -343,12 +343,8 @@ class GameManager {
       return { success: false, error: 'Not your turn to play' };
     }
 
-    if (game.dice !== null) {
-      if (game.dice.keepPlaying) {
-        return { success: false, error: 'You already rolled the dice but can roll it again' };
-      } else {
-        return { success: false, error: 'You already rolled the dice and have valid moves' };
-      }
+    if (game.dice !== null && !game.dice.keepPlaying) {
+      return { success: false, error: 'You already rolled the dice and have valid moves' };
     }
 
     // Roll the dice
@@ -586,7 +582,7 @@ class GameManager {
       return;
     }
 
-    const gameExists = this.game.has(gameId);
+    const gameExists = this.games.has(gameId);
     const isWaiting = Array.from(this.waitingPlayers.values()).some(w => w.gameId === gameId);
 
     if (!gameExists && !isWaiting) {

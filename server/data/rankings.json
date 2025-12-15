@@ -23,13 +23,43 @@
         "victories": 5
       },
       {
-        "nick": "hugoo",
-        "games": 7,
+        "games": 1,
         "victories": 1
       },
       {
+        "nick": "mariaa",
+        "games": 2,
+        "victories": 1
+      },
+      {
+        "nick": "hugoo",
+        "games": 9,
+        "victories": 2
+      }
+    ]
+  ],
+  [
+    "10-7",
+    [
+      {
+        "nick": "hugoo",
+        "games": 2,
+        "victories": 2
+      },
+      {
+        "nick": "mariaa",
+        "games": 2,
+        "victories": 0
+      },
+      {
+        "nick": "hugo",
         "games": 1,
         "victories": 1
+      },
+      {
+        "nick": "maria",
+        "games": 1,
+        "victories": 0
       }
     ]
   ]

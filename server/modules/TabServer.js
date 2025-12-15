@@ -1,9 +1,9 @@
 const http = require('http');
 const url = require('url');
-const UserManager = require('./modules/UserManager');
-const RankingManager = require('./modules/RankingManager');
-const GameManager = require('./modules/GameManager');
-const RequestValidator = require('./modules/RequestValidator');
+const UserManager = require('./UserManager');
+const RankingManager = require('./RankingManager');
+const GameManager = require('./GameManager');
+const RequestValidator = require('./RequestValidator');
 
 class TabServer {
   constructor(port) {
@@ -253,10 +253,8 @@ class TabServer {
   }
 
   start() {
-    this.server.listen(this.port, () => {
+    this.server.listen(this.port, '0.0.0.0', () => {
       console.log(`✓ Tâb Server running on port ${this.port}`);
-      console.log(`✓ Local: http://localhost:${this.port}`);
-      console.log(`✓ Remote: http://twserver.alunos.dcc.fc.up.pt:${this.port}`);
     });
   }
 

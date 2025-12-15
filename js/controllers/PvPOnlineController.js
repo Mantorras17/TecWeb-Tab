@@ -77,18 +77,15 @@ export default class OnlinePvPGameController {
     // --- 0) WINNER (PRIORIDADE MÁXIMA) ---
     // Verificamos isto PRIMEIRO. Se alguém ganhou, não queremos saber de erros ou updates de peças.
     if (data.winner) {
-      // Se não temos o jogo iniciado, não podemos processar o vencedor corretamente, 
-      // mas tentamos mostrar a mensagem na mesma.
       if (!this.game) {
          this.uiManager.setMessage(`Game Over! Winner: ${data.winner}`);
          return;
       }
-
+      this.game.over = true;
       const winner = this.game.players.find(p => p && p.name === data.winner);
       if (winner) {
         this.handleGameOver(winner);
       } else {
-        // Fallback: cria objeto temporário se não encontrar player
         this.handleGameOver({ name: data.winner });
       }
 
@@ -209,6 +206,20 @@ export default class OnlinePvPGameController {
     // --- 4) Dados (dice) ---
     if (data.dice) {
       if (data.dice && typeof data.dice.value === 'number') {
+        if (Array.isArray(data.dice.stickValues)) {
+          window.game = window.game || {};
+          window.game.lastSticks = data.dice.stickValues.map(v => v ? 1 : 0);
+        } else {
+          this.game.stickValue = null;
+          if (Array.isArray(data.dice.stickValues)) {
+            window.game = window.game || {};
+            window.game.lastSticks = data.dice.stickValues.map(v => v ? 1 : 0);
+          }
+          if (this.serverManager && this.serverManager.state) {
+            this.serverManager.state.keepPlaying = false;
+          }
+          this.renderAll({ updateSticks: false });
+        }
         const rollValue = data.dice.value;
         this.game.stickValue = rollValue;
         this.game.lastStickValue = rollValue;
@@ -440,7 +451,6 @@ export default class OnlinePvPGameController {
     if (!this.game) return;
 
     const { nick, pass, gameId } = this.serverManager.state;
-    this.game.endTurn();
     const nextPlayer = this.game.getCurrentPlayer();
 
     this.serverManager.pass(nick, pass, gameId)
@@ -534,8 +544,8 @@ export default class OnlinePvPGameController {
     if (!winner) return;
 
     const winnerName = winner.name;
-    
-    // FIX: Comparar Strings
+    const boardSize = this.game ? this.game.columns : 9;
+
     const loserPlayer = (winnerName === this.game.players[0].name) 
         ? this.game.players[1] 
         : this.game.players[0];
@@ -551,7 +561,7 @@ export default class OnlinePvPGameController {
     if (elements.rollBtn) elements.rollBtn.disabled = true;
     this.uiManager.setBoardDisabled(true);
     this.uiManager.hide(elements.sticksEl);
-    this.openScoreboardPanel();
+    this.uiManager.openScoreboardPanel(boardSize);
 
     setTimeout(() => {
       this.cleanupGame();
@@ -559,7 +569,6 @@ export default class OnlinePvPGameController {
       this.uiManager.openSidePanel();
       this.uiManager.setMessage('Choose the configurations and click "Start" to play the game.');
       this.uiManager.setCloseBlocked(true);
-      this.openScoreboardPanel();
     }, TIMING.gameOverCleanupMs);
   }
 

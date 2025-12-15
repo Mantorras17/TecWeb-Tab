@@ -460,7 +460,8 @@ export default class OnlinePvPGameController {
       });
     
     this.renderAll();
-    this.uiManager.setMessage(`Waiting for ${nextPlayer.name}...`);
+    this.uiManager.setMessage(`Waiting for $
+      {nextPlayer.name}...`);
   }
 
   async handleQuit() {

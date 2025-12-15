@@ -1,7 +1,7 @@
 export default class ServerManager {
 
     constructor() {
-        this.SERVER_URL = "http://twserver.alunos.dcc.fc.up.pt:8008/";
+        this.SERVER_URL = "http://twserver.alunos.dcc.fc.up.pt:8110/";
         this.GROUP_ID = 10;
 
         this.state = {
